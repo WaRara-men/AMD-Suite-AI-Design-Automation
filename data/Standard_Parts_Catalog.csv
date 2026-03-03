@@ -1,6 +1,6 @@
-PartName,Torque_Nm,Price_JPY,Weight_kg,Current_A,LeadTime
-Small-Servo-A,0.5,1500,0.05,1.2,1-day
-Standard-Servo-B,2.5,3500,0.15,2.5,1-day
-High-Torque-C,8.0,8500,0.45,5.0,2-days
-Ultra-Power-D,25.0,18000,1.20,12.0,5-days
-Compact-Gear-E,5.0,12000,0.30,3.5,3-days
+PartName,Torque_Nm,Price_JPY,Weight_kg,Current_A,LeadTime,ProductURL
+Small-Servo-A,0.5,1500,0.05,1.2,1-day,https://jp.misumi-ec.com/
+Standard-Servo-B,2.5,3500,0.15,2.5,1-day,https://www.amazon.co.jp/
+High-Torque-C,8.0,8500,0.45,5.0,2-days,https://www.digikey.jp/
+Ultra-Power-D,25.0,18000,1.20,12.0,5-days,https://www.rs-online.com/
+Compact-Gear-E,5.0,12000,0.30,3.5,3-days,https://www.monotaro.com/
