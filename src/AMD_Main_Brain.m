@@ -1,6 +1,6 @@
 % ==========================================
-% Algo-Mech Designer (AMD) Suite - Core v3.6
-% Bug Fix: Dot Indexing & Empty Solutions
+% Algo-Mech Designer (AMD) Suite - Core v4.0
+% Enterprise Edition: PDF Export & Dark UI
 % ==========================================
 
 function AMD_Main_Brain(target_load, budget_limit, safety_factor)
@@ -16,7 +16,6 @@ function AMD_Main_Brain(target_load, budget_limit, safety_factor)
     catalog = readtable(fullfile(data_dir, 'Standard_Parts_Catalog.csv'));
     materials = unique(catalog.Material);
     
-    % Initialize all_solutions as an empty struct array to avoid indexing errors
     all_solutions = struct('Material', {}, 'T', {}, 'PartNo', {}, 'Price', {}, 'Weight', {});
 
     for i = 1:length(materials)
@@ -29,46 +28,32 @@ function AMD_Main_Brain(target_load, budget_limit, safety_factor)
             sol.PartNo = string(mat_data.PartNumber{valid_idx});
             sol.Price = mat_data.Price_JPY(valid_idx);
             sol.Weight = (case_width * 2) * sol.T * mat_data.Density(valid_idx);
-            all_solutions(end+1) = sol; % Standard struct array append
+            all_solutions(end+1) = sol; 
         end
     end
 
-    % --- 2. Decision Making (Safe version) ---
+    % --- 2. Decision Making ---
     if isempty(all_solutions)
-        msgbox('No material found for this load! / 条件に合う素材が見つかりません', 'AMD Error');
+        msgbox('No material found! / 条件に合う素材がありません', 'AMD Error', 'error');
         return;
     end
 
     feasible_sols = all_solutions([all_solutions.Price] <= budget_limit);
-    
     if isempty(feasible_sols)
-        % No solution within budget, pick the cheapest overall
         [~, b_idx] = min([all_solutions.Price]);
         final_sol = all_solutions(b_idx);
-        fprintf('⚠️ [AI] Over budget! Picked cheapest: %s\n', final_sol.Material);
+        fprintf('⚠️ [AI] Over budget! Picked cheapest.\n');
     else
-        % Lightest among within budget
         [~, b_idx] = min([feasible_sols.Weight]);
         final_sol = feasible_sols(b_idx);
     end
 
-    % --- 3. History Logging ---
-    history_file = fullfile(output_dir, 'design_history.csv');
-    new_entry = table(datetime('now'), target_load, budget_limit, safety_factor, ...
-        final_sol.Material, final_sol.Weight, final_sol.Price, ...
-        'VariableNames', {'Timestamp', 'Load', 'Budget', 'SF', 'Material', 'Weight', 'Price'});
-    
-    if exist(history_file, 'file')
-        history_table = readtable(history_file);
-        history_table = [history_table; new_entry];
-    else
-        history_table = new_entry;
-    end
-    writetable(history_table, history_file);
-
-    % --- 4. Sensitivity Analysis Plot ---
+    % --- 3. Sensitivity Plot (Dark Theme) ---
     load_range = linspace(target_load*0.5, target_load*1.5, 10);
-    fig = figure('Visible', 'off'); hold on;
+    fig = figure('Visible', 'off', 'Color', [0.15 0.15 0.15]); 
+    ax = axes(fig, 'Color', [0.2 0.2 0.2], 'XColor', 'w', 'YColor', 'w'); hold(ax, 'on');
+    
+    colors = lines(length(materials));
     for i = 1:length(materials)
         mat_data = catalog(strcmp(catalog.Material, materials{i}), :);
         w_trend = [];
@@ -78,39 +63,47 @@ function AMD_Main_Brain(target_load, budget_limit, safety_factor)
             if ~isempty(v_idx), w_trend(end+1) = (case_width*2) * mat_data.Thickness(v_idx) * mat_data.Density(v_idx);
             else w_trend(end+1) = NaN; end
         end
-        plot(load_range, w_trend, '-o', 'DisplayName', char(materials{i}), 'LineWidth', 1.5);
+        plot(ax, load_range, w_trend, '-o', 'DisplayName', char(materials{i}), 'LineWidth', 2, 'Color', colors(i,:));
     end
-    xline(target_load, '--k', 'Current', 'LabelVerticalAlignment', 'bottom');
-    grid on; xlabel('Load [kg]'); ylabel('Weight [kg]'); title('Sensitivity Analysis');
-    legend('Location', 'best');
+    xline(ax, target_load, '--w', 'Current', 'LabelVerticalAlignment', 'bottom');
+    grid(ax, 'on'); xlabel(ax, 'Load [kg]'); ylabel(ax, 'Weight [kg]'); 
+    title(ax, 'Sensitivity Analysis', 'Color', 'w');
+    legend(ax, 'Location', 'best', 'TextColor', 'w');
     graph_path = fullfile(output_dir, 'sensitivity_plot.png');
     saveas(fig, graph_path); close(fig);
 
-    % --- 5. Save Results (Nerve) ---
-    T_bridge = cell2table({final_sol.T, char(final_sol.Material), final_sol.Price}, ...
-        'VariableNames', {'Thickness', 'Material', 'Price'});
+    % --- 4. Reporting (Word -> PDF Export) ---
+    T_bridge = cell2table({final_sol.T, char(final_sol.Material), final_sol.Price}, 'VariableNames', {'Thickness', 'Material', 'Price'});
     writetable(T_bridge, fullfile(output_dir, 'Bridge_Nerve.csv'));
     
-    % --- 6. Report Generation ---
     report_name = 'AMD_Decision_Report.docx';
+    pdf_name = 'AMD_Decision_Report.pdf';
     report_path = fullfile(output_dir, report_name);
+    pdf_path = fullfile(output_dir, pdf_name);
+    
     try
         word = actxserver('Word.Application'); word.Visible = 0;
         doc = word.Documents.Add; selection = word.Selection;
-        selection.Font.Size = 20; selection.Font.Bold = 1;
+        selection.Font.Size = 24; selection.Font.Bold = 1;
         selection.TypeText('AMD Design Insights Report'); selection.TypeParagraph;
         selection.Font.Size = 12; selection.Font.Bold = 0;
-        selection.TypeText(sprintf('Best Choice: %s (Weight: %.3f kg)', final_sol.Material, final_sol.Weight));
+        selection.TypeText(sprintf('Best Choice: %s (Weight: %.3f kg, Price: %d JPY)', final_sol.Material, final_sol.Weight, final_sol.Price));
         selection.TypeParagraph;
         selection.InlineShapes.AddPicture(graph_path);
-        doc.SaveAs2(report_path); doc.Close; word.Quit;
-        fprintf('✅ [REPORT] Generated: %s\n', report_path);
-    catch
+        
+        if exist(report_path, 'file'), delete(report_path); end
+        doc.SaveAs2(report_path); 
+        
+        % 🌟 EXPORT TO PDF (Format 17)
+        if exist(pdf_path, 'file'), delete(pdf_path); end
+        doc.SaveAs2(pdf_path, 17);
+        
+        doc.Close; word.Quit;
+        fprintf('✅ [REPORT] DOCX and PDF Generated!\n');
+    catch ME
         if exist('word', 'var'), word.Quit; end
+        fprintf('❌ [REPORT] Error: %s\n', ME.message);
     end
 
-    box_path = fullfile(getenv('USERPROFILE'), 'Box', 'AMD_Reports');
-    if exist(box_path, 'dir'), copyfile(report_path, fullfile(box_path, report_name)); end
-    
-    msgbox(['Analysis Complete!', newline, 'Winner: ', char(final_sol.Material)], 'AMD Suite Status');
+    msgbox(['Analysis Complete!', newline, 'Exported as PDF.', newline, 'Winner: ', char(final_sol.Material)], 'AMD Suite v4.0');
 end
