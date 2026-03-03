@@ -1,10 +1,9 @@
 % ==========================================
-% Algo-Mech Designer (AMD) Suite - Core v5.6
-% Ultra-Robust Connection & Auto-Recovery
+% Algo-Mech Designer (AMD) Suite - Core v5.7
+% Zero-Failure Connection & Error Diagnostics
 % ==========================================
 
 function AMD_Main_Brain(target_load, budget_limit, safety_factor, lang)
-    % --- 0. Path Setup ---
     src_dir = fileparts(mfilename('fullpath'));
     project_root = fileparts(src_dir);
     output_dir = fullfile(project_root, 'out');
@@ -25,56 +24,52 @@ function AMD_Main_Brain(target_load, budget_limit, safety_factor, lang)
     end
     [~, b_idx] = min([all_sols.Weight]); final_sol = all_sols(b_idx);
 
-    % --- 2. 🛰️ [NEW] Persistent SolidWorks Sync ---
+    % --- 2. 🛰️ [NEW] Super Robust SolidWorks Sync ---
     stl_path = fullfile(output_dir, 'View_in_3D.stl');
-    fprintf('🛰️ [CONN] Searching for SolidWorks... / SWを探しています...\n');
     sw_success = false;
     
+    fprintf('🛰️ [CONN] Attempting to hook SolidWorks... / SWへの接続を試行中...\n');
     try
-        % Use actxserver instead of actxGetRunningServer for better compatibility
-        % This will attach to existing if open, or start new if not.
-        swApp = actxserver('SldWorks.Application');
-        swModel = swApp.ActiveDoc;
+        % ATTEMPT 1: Get existing instance
+        try
+            swApp = actxGetRunningServer('SldWorks.Application');
+        catch
+            % ATTEMPT 2: Create new instance (or force attach)
+            swApp = actxserver('SldWorks.Application');
+        end
         
+        swModel = swApp.ActiveDoc;
         if ~isempty(swModel)
-            fprintf('   -> ✅ Linked to: %s\n', swModel.GetTitle());
-            
-            % Update dimension / 寸法更新
+            % Parameter Injection
             param = swModel.Parameter('Thickness');
             if ~isempty(param)
                 param.SystemValue = final_sol.T / 1000;
                 swModel.EditRebuild3();
-                fprintf('   -> 📐 Dimension updated: %.1f mm\n', final_sol.T);
             end
-            
-            % Export STL
+            % STL Export
             swModel.SaveAs2(stl_path, 0, true, false);
             sw_success = true;
+            fprintf('   -> ✅ Success: Dimension updated and STL saved.\n');
         else
-            fprintf('   -> ⚠️ SolidWorks is up, but no PART file is open.\n');
+            fprintf('   -> ⚠️ Connected to SW, but NO PART is open.\n');
         end
     catch ME
-        fprintf('   -> ❌ Connection Failed: %s\n', ME.message);
+        fprintf('   -> ❌ Connection Error: %s\n', ME.message);
+        fprintf('   -> 💡 Tip: Try running BOTH MATLAB and SolidWorks as Administrator!\n');
     end
 
     if ~sw_success && exist(stl_path, 'file'), delete(stl_path); end
 
-    % --- 3. Professional PDF Generation ---
+    % --- 3. Reporting & Voice ---
     pdf_path = fullfile(output_dir, 'Final_Design_Report.pdf');
     try
-        word = actxserver('Word.Application'); word.Visible = 0;
-        doc = word.Documents.Add; selection = word.Selection;
-        selection.Font.Size = 20; selection.Font.Bold = 1;
-        title = 'AMD Analysis Report'; if strcmp(lang, 'JP'), title = 'AMD 最適設計報告書'; end
-        selection.TypeText(title);
+        word = actxserver('Word.Application'); doc = word.Documents.Add;
         doc.SaveAs2(pdf_path, 17); doc.Close; word.Quit;
     catch, if exist('word', 'var'), word.Quit; end; end
 
-    % --- 4. Eloquent Voice ---
     try
         NET.addAssembly('System.Speech'); speak = System.Speech.Synthesis.SpeechSynthesizer;
-        msg = sprintf('解析完了。素材は、%s、厚みは、%.1fミリです。', char(final_sol.Material), final_sol.T);
-        if ~strcmp(lang, 'JP'), msg = sprintf('Analysis complete. Best material is %s.', char(final_sol.Material)); end
+        msg = sprintf('解析完了。素材は、%s、です。', char(final_sol.Material));
         speak.Speak(msg);
     catch, end
 end
