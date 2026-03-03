@@ -1,0 +1,17 @@
+{
+    "design_parameters": {
+        "target_x": 200,
+        "target_y": 150,
+        "safety_factor": 1.5,
+        "density": 0.0027
+    },
+    "paths": {
+        "data_dir": "data",
+        "output_dir": "out",
+        "catalog_file": "Standard_Parts_Catalog.csv"
+    },
+    "preferences": {
+        "auto_capture_sw": true,
+        "generate_word_report": true
+    }
+}
