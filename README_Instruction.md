@@ -1,32 +1,44 @@
-# 🚀 AMD Suite (Algo-Mech Designer) - Instruction Manual / 説明書
+# 🚀 AMD Suite v5.1 - Official Manual / 公式マニュアル
 
-This project integrates **AI (MATLAB)**, **3D Design (SolidWorks)**, and **Cloud (Box)** to automate the entire engineering design workflow.
+AI設計、3D自動更新、PDFレポート生成、クラウド同期を統合した最強の設計スイートへようこそ！
 
-## 📋 Requirements / 必須要件
-- **MATLAB** (Global Optimization Toolbox)
-- **SolidWorks**
-- **Microsoft Word**
+## 🛠️ 事前準備 (重要！)
+このシステムを SolidWorks と連動させるには、**「設計テーブル」**の設定が一度だけ必要です。
 
-## 📂 File Structure / ファイル構成
-1. **`src/AMD_App.m` [NEW]**
-   - **Interactive Dashboard.** Run this to control everything via GUI.
-   - **ダッシュボードアプリ。** UIから直感的に設計をコントロールできます。
-2. **`src/AMD_Main_Brain.m`**
-   - **The Engine.** Core logic for AI and reporting.
-   - **解析エンジン。** AI最適化とレポート生成の本体です。
-3. **`data/Standard_Parts_Catalog.csv`**
-   - **Database.** Material and price info.
-   - **データベース。** 素材や価格の情報。
+### 1. SolidWorks側の設定（紐付け）
+1.  SolidWorksで自分のパーツ（.sldprt）を開きます。
+2.  モデルの「寸法（長さや厚み）」の名前を、`Thickness` や `Width` に変更しておきます。
+3.  メニューの **[挿入] > [テーブル] > [設計テーブル]** を選択。
+4.  [元] で **[ファイル指定]** を選び、このプロジェクトの `out/Bridge_Nerve.csv` を選択します。
+5.  これで準備完了！MATLABで解析を実行すると、このモデルが自動で変形するようになります。
 
-## 🛠️ Usage / 使いかた
+---
 
-### 🖥️ Interactive Mode (Recommended) / アプリで使う
-1. Open MATLAB and run **`src/AMD_App.m`**.
-2. Use sliders to set **Load, Budget, and Safety Factor**.
-3. Click **"🚀 GENERATE ALL"** to update 3D models and generate reports.
+## 🖥️ 使いかた (3ステップ)
 
-### ⚙️ Automation Mode / 自動連携
-The system automatically syncs results to your **Box folder** (`Box/AMD_Reports`) and sends a desktop notification upon completion.
+### STEP 1: アプリの起動
+MATLABのコマンドウィンドウで以下を実行します：
+```matlab
+cd src
+AMD_App
+```
+
+### STEP 2: 設計条件の設定
+1.  右上のボタンで **[Switch to English / 日本語に切替]** を選択。
+2.  **目標荷重 (Load)**: 耐えたい重さを設定。
+3.  **予算上限 (Budget)**: 出せる金額を設定。
+4.  スライダーを動かすと、AIがリアルタイムで最適な素材（アルミ・鉄・カーボン）を提案します。
+
+### STEP 3: 解析とレポート生成
+1.  **[🚀 RUN & GENERATE PDF]** ボタンをポチッと押す。
+2.  AIが計算し、SolidWorksのモデルを自動更新し、音声を出し、PDFレポートを `out/` フォルダに生成します。
+
+---
+
+## 📂 フォルダの中身
+- **`src/`**: アプリと脳（プログラム本体）。
+- **`data/`**: 素材の価格や強度のデータベース。
+- **`out/`**: **【ここが成果物！】** PDFレポート、3Dデータ(STL)、設計履歴。
 
 ---
 **Developed by WaRara-men & Gemini CLI PM**
