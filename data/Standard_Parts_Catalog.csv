@@ -1,9 +1,6 @@
-Material,Thickness,PartNumber,Density,StrengthFactor,Price_JPY,LeadTime
-Aluminum,1.0,AL-10,0.0027,1.0,500,1-day
-Aluminum,3.0,AL-30,0.0027,1.0,1500,1-day
-Aluminum,5.0,AL-50,0.0027,1.0,2500,2-days
-Steel,1.0,ST-10,0.0078,2.5,300,1-day
-Steel,2.0,ST-20,0.0078,2.5,600,1-day
-Steel,3.0,ST-30,0.0078,2.5,900,1-day
-Carbon,1.0,CF-10,0.0016,5.0,8000,5-days
-Carbon,2.0,CF-20,0.0016,5.0,15000,5-days
+PartName,Torque_Nm,Price_JPY,Weight_kg,Current_A,LeadTime
+Small-Servo-A,0.5,1500,0.05,1.2,1-day
+Standard-Servo-B,2.5,3500,0.15,2.5,1-day
+High-Torque-C,8.0,8500,0.45,5.0,2-days
+Ultra-Power-D,25.0,18000,1.20,12.0,5-days
+Compact-Gear-E,5.0,12000,0.30,3.5,3-days

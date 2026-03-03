@@ -1,6 +1,6 @@
 % ==========================================
-% Algo-Mech Designer (AMD) Suite - App v7.5.1
-% TRUE FINAL: Fixed Callback Naming Error
+% Algo-Mech Designer (AMD) Suite - App v8.0
+% Robot Design Dashboard (Motor & Payload)
 % ==========================================
 
 function AMD_App()
@@ -10,73 +10,78 @@ function AMD_App()
     output_dir = fullfile(project_root, 'out');
     addpath(src_dir);
 
-    % --- 1. Silent Startup Cleanup ---
-    stray = {'*.asv', 'AMD_*.pdf', 'Final_*.pdf', '*.docx', '*.png'};
-    for s = 1:length(stray)
-        files = dir(fullfile(project_root, stray{s}));
-        for f = 1:length(files), delete(fullfile(project_root, files(f).name)); end
-        files = dir(fullfile(src_dir, stray{s}));
-        for f = 1:length(files), delete(fullfile(src_dir, files(f).name)); end
-    end
-
-    % --- 2. UI Reconstruction ---
     bg_color = [0.05 0.05 0.08]; panel_bg = [0.1 0.1 0.15]; txt_color = [0.95 0.95 0.95];
-    fig = uifigure('Name', 'AMD Suite v7.5.1 - Final Absolute Edition', 'Position', [100 100 1150 650], 'Color', bg_color);
+    fig = uifigure('Name', 'AMD Suite v8.0 - Robot Actuator Selector', 'Position', [100 100 1150 650], 'Color', bg_color);
     current_lang = 'JP';
 
+    % Header
+    uilabel(fig, 'Text', '🤖 AMD SUITE v8.0: ROBOT DESIGN CENTER', 'FontSize', 20, 'FontWeight', 'bold', 'Position', [20 610 600 30], 'FontColor', [1.0 0.6 0.2]);
+
     % Settings
-    pnl_settings = uipanel(fig, 'Title', 'Design Parameters', 'Position', [20 120 300 480], 'BackgroundColor', panel_bg, 'ForegroundColor', txt_color);
-    uilabel(pnl_settings, 'Text', 'Target Load / 目標荷重 [kg]:', 'Position', [10 410 250 22], 'FontColor', txt_color, 'FontWeight', 'bold');
-    sld_load = uislider(pnl_settings, 'Limits', [5 100], 'Value', 30, 'Position', [20 380 250 3], 'FontColor', txt_color);
-    uilabel(pnl_settings, 'Text', 'Budget Limit / 予算上限 [JPY]:', 'Position', [10 310 250 22], 'FontColor', txt_color, 'FontWeight', 'bold');
-    sld_budget = uislider(pnl_settings, 'Limits', [500 20000], 'Value', 5000, 'Position', [20 280 250 3], 'FontColor', txt_color);
-    uilabel(pnl_settings, 'Text', 'Safety Factor / 安全率:', 'Position', [10 210 250 22], 'FontColor', txt_color, 'FontWeight', 'bold');
-    sld_safety = uislider(pnl_settings, 'Limits', [1.0 3.0], 'Value', 1.5, 'Position', [20 180 250 3], 'FontColor', txt_color);
+    pnl_settings = uipanel(fig, 'Title', 'Robot Specifications / ロボット仕様', 'Position', [20 120 300 480], 'BackgroundColor', panel_bg, 'ForegroundColor', txt_color);
+    
+    uilabel(pnl_settings, 'Text', '1. Payload / 持ち上げたい重さ [kg]:', 'Position', [10 410 250 22], 'FontColor', txt_color, 'FontWeight', 'bold');
+    sld_load = uislider(pnl_settings, 'Limits', [0.1 10.0], 'Value', 2.0, 'Position', [20 380 250 3], 'FontColor', txt_color);
+    
+    uilabel(pnl_settings, 'Text', '2. Arm Length / アームの長さ [mm]:', 'Position', [10 310 250 22], 'FontColor', txt_color, 'FontWeight', 'bold');
+    sld_len = uislider(pnl_settings, 'Limits', [50 1000], 'Value', 300, 'Position', [20 280 250 3], 'FontColor', txt_color);
 
-    % Analytics
-    pnl_ana = uipanel(fig, 'Title', 'AI Results', 'Position', [330 120 340 480], 'BackgroundColor', panel_bg, 'ForegroundColor', txt_color);
-    lbl_status = uilabel(pnl_ana, 'Text', 'Best: ---', 'FontSize', 16, 'FontWeight', 'bold', 'Position', [20 420 300 40], 'FontColor', [1.0 0.8 0.2]);
-    ax_bar = uiaxes(pnl_ana, 'Position', [20 20 300 380], 'Color', bg_color, 'XColor', txt_color, 'YColor', txt_color);
+    uilabel(pnl_settings, 'Text', '3. Budget Limit / 予算上限 [JPY]:', 'Position', [10 210 250 22], 'FontColor', txt_color, 'FontWeight', 'bold');
+    sld_budget = uislider(pnl_settings, 'Limits', [1000 50000], 'Value', 10000, 'Position', [20 180 250 3], 'FontColor', txt_color);
 
-    % 3D
-    pnl_3d = uipanel(fig, 'Title', 'Live 3D Preview', 'Position', [680 120 450 480], 'BackgroundColor', panel_bg, 'ForegroundColor', txt_color);
+    % Analysis & 3D Preview
+    pnl_ana = uipanel(fig, 'Title', 'Selection Status / 選定状況', 'Position', [330 120 340 480], 'BackgroundColor', panel_bg, 'ForegroundColor', txt_color);
+    lbl_status = uilabel(pnl_ana, 'Text', 'Selected: ---', 'FontSize', 16, 'FontWeight', 'bold', 'Position', [20 420 300 40], 'FontColor', [0.2 0.8 1.0]);
+    lbl_details = uilabel(pnl_ana, 'Text', 'Required Torque: --- N-m', 'FontSize', 12, 'Position', [20 380 300 30], 'FontColor', txt_color);
+    ax_bar = uiaxes(pnl_ana, 'Position', [20 20 300 340], 'Color', bg_color, 'XColor', txt_color, 'YColor', txt_color); title(ax_bar, 'Motor Torque Comparison', 'Color', 'w');
+
+    pnl_3d = uipanel(fig, 'Title', 'Virtual Preview / プレビュー', 'Position', [680 120 450 480], 'BackgroundColor', panel_bg, 'ForegroundColor', txt_color);
     ax_3d = uiaxes(pnl_3d, 'Position', [10 10 430 430], 'Color', [0 0 0], 'XColor', 'none', 'YColor', 'none');
     view(ax_3d, 3); axis(ax_3d, 'equal'); grid(ax_3d, 'on');
 
-    btn_run = uibutton(fig, 'push', 'Text', '🚀 GENERATE OFFICIAL CERTIFICATE', 'FontSize', 16, 'FontWeight', 'bold', 'BackgroundColor', [0.1 0.6 0.3], 'FontColor', 'white', 'Position', [100 30 950 70]);
+    btn_run = uibutton(fig, 'push', 'Text', '🚀 SELECT MOTOR & GENERATE CERTIFICATE', 'FontSize', 16, 'FontWeight', 'bold', 'BackgroundColor', [0.1 0.4 0.6], 'FontColor', 'white', 'Position', [100 30 950 70]);
 
-    % --- 3. Functions ---
+    % --- Core UI Sync ---
     function update_ui(~, ~)
         try
-            catalog = readtable(data_path); mats = unique(catalog.Material); all_sols = [];
-            for i = 1:length(mats)
-                m_data = catalog(strcmp(catalog.Material, mats{i}), :);
-                min_t = (sld_load.Value / m_data.StrengthFactor(1)) * 0.1 * sld_safety.Value;
-                idx = find(m_data.Thickness >= min_t, 1, 'first');
-                if ~isempty(idx), sol.Mat = string(mats{i}); sol.T = m_data.Thickness(idx); sol.W = (300) * sol.T * m_data.Density(idx); all_sols = [all_sols; sol]; end
-            end
-            [~, b_idx] = min([all_sols.W]); final = all_sols(b_idx);
-            lbl_status.Text = ['👑 Best: ', char(final.Mat)];
-            bar(ax_bar, [all_sols.W], 'FaceColor', [0.2 0.7 0.8]); set(ax_bar, 'XTickLabel', {all_sols.Mat});
+            catalog = readtable(data_path);
+            % Physics: T = m * g * L
+            req_t = (sld_load.Value * 9.8) * (sld_len.Value / 1000) * 1.5; % SF fixed 1.5
             
-            % Draw 3D
-            cla(ax_3d); verts = [0 0 0; 150 0 0; 150 50 0; 0 50 0; 0 0 final.T; 150 0 final.T; 150 50 final.T; 0 50 final.T];
-            faces = [1 2 6 5; 2 3 7 6; 3 4 8 7; 4 1 5 8; 1 2 3 4; 5 6 7 8];
-            patch(ax_3d, 'Faces', faces, 'Vertices', verts, 'FaceColor', [0.3 0.5 0.7], 'EdgeColor', 'w');
-            axis(ax_3d, 'tight'); axis(ax_3d, 'equal'); camlight(ax_3d, 'headlight');
+            feasible = find(catalog.Torque_Nm >= req_t & catalog.Price_JPY <= sld_budget.Value);
+            if isempty(feasible), [~, b_idx] = min(catalog.Price_JPY); else, [~, sub_idx] = min(catalog.Weight_kg(feasible)); b_idx = feasible(sub_idx); end
+            motor = catalog(b_idx, :);
+            
+            lbl_status.Text = ['👑 Selected: ', char(motor.PartName)];
+            lbl_details.Text = sprintf('Required Torque: %.2f N-m', req_t);
+            
+            bar(ax_bar, catalog.Torque_Nm, 'FaceColor', [0.3 0.3 0.3]); hold(ax_bar, 'on');
+            bar(ax_bar, b_idx, motor.Torque_Nm, 'FaceColor', [1.0 0.6 0.2]); hold(ax_bar, 'off');
+            set(ax_bar, 'XTickLabel', catalog.PartName); ylabel(ax_bar, 'Torque [N-m]');
+            
+            % Simple 3D arm preview
+            cla(ax_3d);
+            L = sld_len.Value;
+            [X, Y, Z] = cylinder([5 5], 20); % Arm link
+            Z = Z * L;
+            surf(ax_3d, Z, X, Y, 'FaceColor', [0.7 0.7 0.7], 'EdgeColor', 'none'); % Rotated link
+            % Draw motor at the end
+            [Xm, Ym, Zm] = sphere(20); Xm = Xm*20; Ym = Ym*20; Zm = Zm*20;
+            surf(ax_3d, Xm, Ym, Zm, 'FaceColor', [1.0 0.6 0.2], 'EdgeColor', 'none');
+            view(ax_3d, 3); axis(ax_3d, 'equal'); camlight(ax_3d); material(ax_3d, 'shiny');
         catch, end
     end
 
-    % 🎯 FIXED: Corrected function name to match callback
     btn_run.ButtonPushedFcn = @(btn, event) run_full();
     function run_full()
-        btn_run.Text = '⌛ Generating Official Certificate...'; btn_run.Enable = 'off'; drawnow;
-        AMD_Main_Brain(sld_load.Value, sld_budget.Value, sld_safety.Value, current_lang);
-        btn_run.Text = '🚀 GENERATE OFFICIAL CERTIFICATE'; btn_run.Enable = 'on';
+        btn_run.Text = '⌛ Analyzing Physics... / 物理シミュレーション中...'; btn_run.Enable = 'off'; drawnow;
+        AMD_Main_Brain(sld_load.Value, sld_len.Value, sld_budget.Value, 1.5, current_lang);
+        update_ui();
+        btn_run.Text = '🚀 SELECT MOTOR & GENERATE CERTIFICATE'; btn_run.Enable = 'on';
     end
 
     addlistener(sld_load, 'ValueChanged', @update_ui);
+    addlistener(sld_len, 'ValueChanged', @update_ui);
     addlistener(sld_budget, 'ValueChanged', @update_ui);
-    addlistener(sld_safety, 'ValueChanged', @update_ui);
     update_ui();
 end
