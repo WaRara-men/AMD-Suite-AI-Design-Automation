@@ -1,7 +1,7 @@
 PartName,Torque_Nm,Price_JPY,Weight_kg,Current_A,LeadTime,ProductURL
-MG996R-Digital-Servo,1.0,1200,0.055,2.5,1-day,https://www.amazon.co.jp/dp/B0769G59R6
-DS3218-High-Torque-Servo,2.0,2800,0.060,3.0,1-day,https://www.amazon.co.jp/dp/B07SBYZMT9
-Dynamixel-AX-12A,1.5,6800,0.054,1.5,3-days,https://www.digikey.jp/ja/products/detail/robotis/902-0005-000/10245144
-Dynamixel-MX-28T,2.5,32000,0.072,1.4,5-days,https://www.digikey.jp/ja/products/detail/robotis/902-0039-000/10245154
-RS-775-DC-Motor-With-Gear,5.0,4500,0.380,10.0,2-days,https://www.amazon.co.jp/dp/B08L3KVZMV
-60kg-High-Torque-Servo,6.0,8500,0.160,5.0,2-days,https://www.amazon.co.jp/dp/B08ZSFMDDS
+MG996R-Digital-Servo,1.0,1200,0.055,2.5,1-day,https://www.amazon.co.jp/s?k=MG996R+servo
+DS3218-High-Torque-Servo,2.0,2800,0.060,3.0,1-day,https://www.amazon.co.jp/s?k=DS3218+servo
+Dynamixel-AX-12A,1.5,6800,0.054,1.5,3-days,https://www.digikey.jp/ja/products/search?keywords=AX-12A
+Dynamixel-MX-28T,2.5,32000,0.072,1.4,5-days,https://www.digikey.jp/ja/products/search?keywords=MX-28T
+RS-775-DC-Motor-With-Gear,5.0,4500,0.380,10.0,2-days,https://www.amazon.co.jp/s?k=RS-775+motor+geared
+60kg-High-Torque-Servo,6.0,8500,0.160,5.0,2-days,https://www.amazon.co.jp/s?k=60kg+servo+high+torque
