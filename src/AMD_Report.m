@@ -1,16 +1,28 @@
 % ==========================================
-% Algo-Mech Designer (AMD) Suite - Reporter v21.0
+% Algo-Mech Designer (AMD) Suite - Reporter v22.1
+% MULTI-MODE STABLE GRAPH ENGINE
 % ==========================================
 function AMD_Report(payload, length, radius, budget, safety, mode, motor, req_val, m_name, m_unit, desc_jp, catalog, b_idx, output_dir)
-    fprintf('📜 [REPORT] Crafting Masterpiece Certificate...\n');
+    fprintf('📜 [REPORT] Forging definitive certificate for %s...\n', mode);
     chart_path = fullfile(output_dir, 'temp_chart.png');
     render_path = fullfile(output_dir, 'temp_3d.png');
     
-    % Recreate visuals for high-res embedding
-    f1 = figure('Visible', 'off'); bar(catalog.Torque_Nm); hold on; bar(b_idx, motor.Torque_Nm); saveas(f1, chart_path); close(f1);
+    % --- 📊 FIXED: Mode-Aware Graph Generation ---
+    f1 = figure('Visible', 'off');
+    switch mode
+        case {'Arm', 'Lift', 'Mobile'}, plot_vals = catalog.Torque_Nm;
+        case 'Power', plot_vals = catalog.Capacity_mAh;
+        case 'Bolt', plot_vals = catalog.MaxShear_N;
+    end
+    bar(plot_vals, 'FaceColor', [0.3 0.3 0.3]); hold on;
+    bar(b_idx, plot_vals(b_idx), 'FaceColor', [1.0 0.6 0.2]);
+    set(gca, 'XTickLabel', catalog.PartName, 'XTickLabelRotation', 30);
+    title(sprintf('%s Comparison', m_name));
+    saveas(f1, chart_path); close(f1);
+    
+    % --- 📸 Simplified 3D Evidence ---
     f2 = figure('Visible', 'off', 'Color', 'w'); ax = axes(f2);
-    % Simple representative 3D
-    [X, Y, Z] = cylinder([10 10], 20); surf(ax, Z*100, X, Y, 'FaceColor', [0.7 0.7 0.7]); 
+    [X, Y, Z] = cylinder([10 10], 20); surf(ax, Z*100, X, Y, 'FaceColor', [0.7 0.7 0.7]);
     view(3); axis equal; axis off; saveas(f2, render_path); close(f2);
 
     ts = datestr(now, 'yyyymmdd_HHMMSS');
@@ -22,15 +34,15 @@ function AMD_Report(payload, length, radius, budget, safety, mode, motor, req_va
         
         selection.ParagraphFormat.Alignment = 1; selection.Font.Size = 24; selection.Font.Bold = 1;
         selection.TypeText('OFFICIAL ENGINEERING VERIFICATION'); selection.TypeParagraph;
-        selection.Font.Size = 18; selection.TypeText(['■ モジュール: ', mode, ' 解析証明書']); selection.TypeParagraph;
+        selection.Font.Size = 18; selection.TypeText(['■ ', mode, ' 分析証明書']); selection.TypeParagraph;
         
         selection.ParagraphFormat.Alignment = 0; selection.Font.Size = 11; selection.Font.Bold = 1;
-        selection.TypeText('■ 論理性解析 (Reasoning)'); selection.TypeParagraph;
+        selection.TypeText('■ 解析の論理性 (Logic)'); selection.TypeParagraph;
         selection.Font.Bold = 0;
-        selection.TypeText(['本解析（', desc_jp, '）の結果、AIは以下のコンポーネントを最適解として特定しました。']);
-        selection.TypeParagraph; selection.InlineShapes.AddPicture(render_path); % 3D Image!
-        
-        selection.Font.Bold = 1; selection.TypeText('■ スペック ＆ 購入 (Specs & Buy)'); selection.TypeParagraph;
+        selection.TypeText(sprintf('解析対象: %s. 必要スペック: %.2f %s. 選定された「%s」はこの条件をクリアする最適解です。', desc_jp, req_val, m_unit, char(motor.PartName)));
+        selection.TypeParagraph; selection.TypeParagraph;
+
+        selection.Font.Bold = 1; selection.TypeText('■ 詳細スペック ＆ 購入リンク (Specs & Link)'); selection.TypeParagraph;
         tbl = doc.Tables.Add(selection.Range, 4, 2); tbl.Borders.Enable = 1;
         specs = {'Product', char(motor.PartName); [m_name, ' [', m_unit, ']'], num2str(req_val, '%.2f'); 'Price', [num2str(round(motor.Price_JPY)), ' JPY']; 'Link', '🛒 CLICK TO BUY'};
         for r = 1:4
@@ -38,7 +50,7 @@ function AMD_Report(payload, length, radius, budget, safety, mode, motor, req_va
             if r == 4, doc.Hyperlinks.Add(tbl.Cell(r,2).Range, char(motor.ProductURL), '', '', specs{r,2}); else tbl.Cell(r,2).Range.Text = specs{r,2}; end
         end
         doc.Range(tbl.Range.End, tbl.Range.End).Select; selection = word.Selection;
-        selection.TypeParagraph; selection.InlineShapes.AddPicture(chart_path); % Graph!
+        selection.TypeParagraph; selection.InlineShapes.AddPicture(chart_path);
         
         selection.ParagraphFormat.Alignment = 2; selection.Font.Bold = 1;
         selection.TypeText('Chief Engineer: WaRara-men');
