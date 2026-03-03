@@ -1,16 +1,17 @@
 % ==========================================
-% Algo-Mech Designer (AMD) Suite - Core v6.1
-% Intelligent Smart-Search SW Connection
+% Algo-Mech Designer (AMD) Suite - Core v6.2
+% SW Dimension Scanner & Dimension Inspector
 % ==========================================
 
 function AMD_Main_Brain(target_load, budget_limit, safety_factor, lang)
     src_dir = fileparts(mfilename('fullpath'));
     project_root = fileparts(src_dir);
+    data_dir = fullfile(project_root, 'data');
     output_dir = fullfile(project_root, 'out');
     if ~exist(output_dir, 'dir'), mkdir(output_dir); end
     
     % --- 1. AI Logic ---
-    catalog = readtable(fullfile(project_root, 'data', 'Standard_Parts_Catalog.csv'));
+    catalog = readtable(fullfile(data_dir, 'Standard_Parts_Catalog.csv'));
     materials = unique(catalog.Material); all_sols = struct('Material', {}, 'T', {}, 'PartNo', {}, 'Price', {}, 'Weight', {});
     for i = 1:length(materials)
         mat_data = catalog(strcmp(catalog.Material, materials{i}), :);
@@ -24,65 +25,62 @@ function AMD_Main_Brain(target_load, budget_limit, safety_factor, lang)
     end
     [~, b_idx] = min([all_sols.Weight]); final_sol = all_sols(b_idx);
 
-    % --- 2. 🛰️ [NEW] Intelligent SolidWorks Sync ---
+    % --- 2. 🛰️ [NEW] Full Model Dimension Scanner ---
     stl_path = fullfile(output_dir, 'View_in_3D.stl');
     sw_synced = false;
-    fprintf('🛰️ [SW] Scanning for dimensions... / 寸法を自動探索中...\n');
+    fprintf('\n🔍 [SCAN] Scanning SolidWorks Model Dimensions... / 全寸法をスキャン中...\n');
+    
     try
         swApp = actxGetRunningServer('SldWorks.Application');
         swModel = swApp.ActiveDoc;
         if ~isempty(swModel)
-            % 1. Try Global Variable "Thickness"
-            eqMgr = swModel.GetEquationMgr();
-            for i = 0:eqMgr.GetCount()-1
-                if contains(eqMgr.GetEquation(i), 'Thickness')
-                    eqMgr.SetEquationAndValue(i, sprintf('"Thickness" = %f', final_sol.T));
-                    sw_synced = true;
-                    break;
-                end
-            end
-            
-            % 2. Try Direct Dimension "Thickness" (Sketch or Feature)
-            if ~sw_synced
-                params = {'Thickness', 'Thickness@Sketch1', 'D1@Boss-Extrude1', 'D1@押し出し1'};
-                for p = 1:length(params)
-                    dim = swModel.Parameter(params{p});
-                    if ~isempty(dim)
-                        dim.SystemValue = final_sol.T / 1000;
-                        sw_synced = true;
-                        fprintf('   -> ✅ Found and updated: %s\n', params{p});
-                        break;
+            fprintf('--- Dimensions found in your model / 見つかった寸法一覧 ---\n');
+            % 🎯 Get all dimensions using DisplayDimension traversal
+            swFeat = swModel.FirstFeature;
+            while ~isempty(swFeat)
+                swDispDim = swFeat.GetFirstDisplayDimension;
+                while ~isempty(swDispDim)
+                    swDim = swDispDim.GetDimension;
+                    dimName = swDim.FullName;
+                    dimVal = swDim.SystemValue * 1000; % meters to mm
+                    fprintf('   [*] Name: %s (Current: %.2f mm)\n', dimName, dimVal);
+                    
+                    % 🌟 Automatic Matching Logic
+                    % If name contains "Thickness" or "D1@Boss-Extrude1" (common names)
+                    target_names = {'Thickness', '厚み', 'D1@Boss-Extrude1', 'D1@押し出し1', 'D1@Sketch1'};
+                    for tn = 1:length(target_names)
+                        if contains(dimName, target_names{tn}, 'IgnoreCase', true)
+                            swDim.SystemValue = final_sol.T / 1000;
+                            sw_synced = true;
+                            fprintf('      -> ✅ MATCHED and UPDATED!\n');
+                        end
                     end
+                    swDispDim = swFeat.GetNextDisplayDimension(swDispDim);
                 end
+                swFeat = swFeat.GetNextFeature;
             end
+            fprintf('-------------------------------------------------------\n');
             
             if sw_synced
                 swModel.EditRebuild3();
                 swModel.SaveAs2(stl_path, 0, true, false);
             end
         end
-    catch; end
+    catch ME
+        fprintf('   -> ⚠️ Connection Error: %s\n', ME.message);
+    end
 
-    % --- 3. Reporting (PDF) ---
-    pdf_path = fullfile(output_dir, 'Final_Report.pdf');
-    try
-        word = actxserver('Word.Application'); word.Visible = 0;
-        doc = word.Documents.Add; selection = word.Selection;
-        selection.TypeText(['Best Material: ', char(final_sol.Material)]);
-        doc.SaveAs2(pdf_path, 17); doc.Close(0); word.Quit;
-    catch, if exist('word', 'var'), word.Quit; end; end
+    if ~sw_synced && exist(stl_path, 'file'), delete(stl_path); end
 
-    % --- 4. Smart Voice ---
+    % --- 3. Reporting & Voice ---
     try
         NET.addAssembly('System.Speech'); speak = System.Speech.Synthesis.SpeechSynthesizer;
         if sw_synced
-            msg = sprintf('解析完了。ソリッドワークスとの同期に成功しました。最適な素材は、%s、です。', char(final_sol.Material));
+            msg = '同期に成功しました！モデルを見てください！';
         else
-            msg = sprintf('解析完了。最適な素材は、%s、ですが、モデルが見つかりませんでした。', char(final_sol.Material));
+            msg = 'モデルの寸法が見つかりませんでした。画面の一覧を確認してください。';
         end
         speak.Speak(msg);
     catch, end
-
-    % --- 5. Clean-up ---
-    delete(fullfile(project_root, 'AMD*.*')); delete(fullfile(project_root, 'Final*.*'));
+    fprintf('✅ [DONE] Check command window for scan results.\n');
 end
