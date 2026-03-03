@@ -1,10 +1,9 @@
 % ==========================================
-% Algo-Mech Designer (AMD) Suite - Core v4.8
-% Virtual 3D Engine & Auto-Organizer
+% Algo-Mech Designer (AMD) Suite - Core v4.9
+% Stable 3D Engine & Robust SW Interface
 % ==========================================
 
 function AMD_Main_Brain(target_load, budget_limit, safety_factor, lang)
-    % --- 0. Path & Dir Setup ---
     src_dir = fileparts(mfilename('fullpath'));
     project_root = fileparts(src_dir);
     data_dir = fullfile(project_root, 'data');
@@ -27,35 +26,30 @@ function AMD_Main_Brain(target_load, budget_limit, safety_factor, lang)
         end
     end
 
-    % Decision
     feasible = all_solutions([all_solutions.Price] <= budget_limit);
     if isempty(feasible), [~, b_idx] = min([all_solutions.Price]); final_sol = all_solutions(b_idx);
     else, [~, b_idx] = min([feasible.Weight]); final_sol = feasible(b_idx); end
 
-    % --- 2. 💎 3D Export (Real SW or Virtual Block) ---
+    % --- 2. 💎 Robust SolidWorks Interface ---
     stl_path = fullfile(output_dir, 'View_in_3D.stl');
-    fprintf('📦 [3D] Generating 3D representation... / 3D形状を生成中...\n');
-    
+    fprintf('📦 [3D] Checking SolidWorks Status... / SWの状態を確認中...\n');
+    sw_success = false;
     try
         swApp = actxGetRunningServer('SldWorks.Application');
         swModel = swApp.ActiveDoc;
         if ~isempty(swModel)
-            % Real SW Export
             swModel.SaveAs2(stl_path, 0, true, false);
-            fprintf('   -> ✅ Real STL Exported from SolidWorks.\n');
+            fprintf('   -> ✅ Real STL Generated from SolidWorks!\n');
+            sw_success = true;
         else
-            error('No active doc');
+            fprintf('   -> ⚠️ SW is open, but NO PART is active. / パーツが開かれていません。\n');
         end
     catch
-        % [NEW] Virtual Block Generation (Fallback)
-        % Create a 3D block matching the calculated thickness
-        [X, Y, Z] = meshgrid([0 150], [0 50], [0 final_sol.T]);
-        K = convhull(X(:), Y(:), Z(:));
-        % Save as a simple MATLAB data or just let the app handle the failure
-        fprintf('   -> 🌐 SW not found. Virtual 3D mode activated.\n');
-        % Create a dummy STL file for the viewer to avoid errors
-        % (Simple cube for STL demo)
+        fprintf('   -> ⚠️ SolidWorks not detected. Falling back to Virtual.\n');
     end
+
+    % If SW failed, remove old STL to force Virtual Preview
+    if ~sw_success && exist(stl_path, 'file'), delete(stl_path); end
 
     % --- 3. Reporting (PDF) ---
     pdf_path = fullfile(output_dir, 'AMD_Decision_Report.pdf');
@@ -64,31 +58,20 @@ function AMD_Main_Brain(target_load, budget_limit, safety_factor, lang)
         doc = word.Documents.Add; selection = word.Selection;
         title = 'AMD Analysis Report'; if strcmp(lang, 'JP'), title = 'AMD 解析報告書'; end
         selection.Font.Size = 20; selection.Font.Bold = 1; selection.TypeText(title);
-        if exist(pdf_path, 'file'), delete(pdf_path); end
         doc.SaveAs2(pdf_path, 17); doc.Close; word.Quit;
     catch
         if exist('word', 'var'), word.Quit; end
     end
 
-    % --- 4. 🧹 [NEW] Auto-Organizer / ファイルの大掃除 ---
-    fprintf('🧹 [CLEAN] Organizing files... / フォルダを整理中...\n');
-    % Move any stray files to /out
-    stray_files = {'*.png', '*.docx', '*.csv', '*.pdf', '*.stl'};
-    for f = 1:length(stray_files)
-        move_cmd = sprintf('move "%s" "%s" >nul 2>&1', fullfile(project_root, stray_files{f}), output_dir);
-        system(move_cmd);
-        move_cmd_src = sprintf('move "%s" "%s" >nul 2>&1', fullfile(src_dir, stray_files{f}), output_dir);
-        system(move_cmd_src);
-    end
-    % Delete temp MATLAB files
-    delete(fullfile(src_dir, '*.asv')); delete(fullfile(project_root, '*.asv'));
+    % --- 4. 🧹 Auto-Organizer ---
+    temp_patterns = {'*.asv', '*.m~', 'temp_*.*'};
+    for p = 1:length(temp_patterns), delete(fullfile(src_dir, temp_patterns{p})); end
 
-    % --- 5. Voice Guidance ---
+    % --- 5. Voice ---
     try
         NET.addAssembly('System.Speech');
         speak = System.Speech.Synthesis.SpeechSynthesizer;
-        msg = '設計が完了しました。プレビューを確認してください。';
-        if ~strcmp(lang, 'JP'), msg = 'Analysis complete. Preview is ready.'; end
+        msg = '解析完了。'; if ~strcmp(lang, 'JP'), msg = 'Analysis complete.'; end
         speak.Speak(msg);
     catch, end
 end
