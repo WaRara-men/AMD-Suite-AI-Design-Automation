@@ -1,5 +1,6 @@
 % ==========================================
-% Algo-Mech Designer (AMD) Suite - Visuals v22.0
+% Algo-Mech Designer (AMD) Suite - Visuals v23.3
+% HIGH-DEFINITION PREVIEW: Auto-Scaling Engine
 % ==========================================
 function AMD_Visuals(ax_bar, ax_3d, catalog, b_idx, mode, inputs, m_name, m_unit)
     % --- 📊 Graph: Ranking Refresh ---
@@ -10,11 +11,11 @@ function AMD_Visuals(ax_bar, ax_3d, catalog, b_idx, mode, inputs, m_name, m_unit
         case 'Bolt', vals = catalog.MaxShear_N;
     end
     bar(ax_bar, vals, 'FaceColor', [0.2 0.2 0.2]); hold(ax_bar, 'on');
-    bar(ax_bar, b_idx, vals(b_idx), 'FaceColor', [1.0 0.5 0.0]); % Winner
+    bar(ax_bar, b_idx, vals(b_idx), 'FaceColor', [1.0 0.5 0.0]);
     set(ax_bar, 'XTickLabel', catalog.PartName, 'XColor', 'w', 'YColor', 'w', 'XTickLabelRotation', 30);
     ylabel(ax_bar, sprintf('%s [%s]', m_name, m_unit), 'Color', 'w');
 
-    % --- 💎 3D: Hyper-Realistic Robotics Preview ---
+    % --- 💎 3D: Hyper-Stable Mechanical Previews ---
     cla(ax_3d, 'reset'); hold(ax_3d, 'on');
     switch mode
         case 'Arm'
@@ -22,42 +23,34 @@ function AMD_Visuals(ax_bar, ax_3d, catalog, b_idx, mode, inputs, m_name, m_unit
             [X, Y, Z] = cylinder([rad rad], 20); Z = Z * len;
             surf(ax_3d, Z, X, Y, 'FaceColor', [0.7 0.7 0.7], 'EdgeColor', 'none');
             [Xm, Ym, Zm] = sphere(20); w_s = 20 + rad;
-            surf(ax_3d, Xm*w_s+len, Ym*w_s, Zm*w_s, 'FaceColor', [1.0 0.4 0.0], 'EdgeColor', 'none'); % Payload
-            text(ax_3d, len, 0, w_s+30, 'ROBOT ARM', 'Color', 'w', 'FontWeight', 'bold');
+            surf(ax_3d, Xm*w_s+len, Ym*w_s, Zm*w_s, 'FaceColor', [1.0 0.4 0.0], 'EdgeColor', 'none');
         case 'Lift'
-            p_rad = inputs(2); load_m = inputs(1);
-            % Pulley (Blue Wheel)
+            p_rad = inputs(2); 
             [X, Y, Z] = cylinder([p_rad p_rad], 20); Z = Z * 15;
             surf(ax_3d, X, Y, Z, 'FaceColor', [0.2 0.5 1.0], 'EdgeColor', 'none');
-            % Rope (White Line)
             plot3(ax_3d, [p_rad p_rad], [0 0], [0 -150], 'w', 'LineWidth', 2);
-            % Lifting Box (Orange)
-            b_s = 15 + load_m; % Size based on load
-            [Xb, Yb, Zb] = meshgrid([p_rad-b_s p_rad+b_s], [-b_s b_s], [-150-b_s -150+b_s]);
+            [Xb, Yb, Zb] = meshgrid([-20 20], [-20 20], [-180 -150]);
             Kb = convhull(Xb(:), Yb(:), Zb(:));
             trisurf(Kb, Xb(:), Yb(:), Zb(:), 'FaceColor', [1.0 0.5 0.0], 'EdgeColor', 'none', 'Parent', ax_3d);
-            text(ax_3d, p_rad, 0, -50, 'LIFTING STAGE', 'Color', 'w', 'FontWeight', 'bold');
         case 'Mobile'
-            inc = inputs(3); w_rad = inputs(2);
-            L = 300; H = L * tan(inc*pi/180);
-            % Sliding Slope (Dark Gray)
-            fill3(ax_3d, [0 L L 0], [80 80 -80 -80], [0 H H 0], [0.3 0.3 0.3]);
-            % Red Tire
+            inc = inputs(3); w_rad = inputs(2); L = 300; H = L * tan(inc*pi/180);
+            fill3(ax_3d, [0 L L 0], [80 80 -80 -80], [0 H H 0], [0.3 0.3 0.3]); % Slope
             [X, Y, Z] = cylinder([w_rad w_rad], 20);
-            surf(ax_3d, X+L/2, Z*30-15, Y+H/2+w_rad, 'FaceColor', [0.8 0.1 0.1], 'EdgeColor', 'none');
-            text(ax_3d, L/2, 0, H/2+w_rad+50, 'MOBILE BASE', 'Color', 'w', 'FontWeight', 'bold');
+            surf(ax_3d, X+L/2, Z*30-15, Y+H/2+w_rad, 'FaceColor', [0.8 0.1 0.1], 'EdgeColor', 'none'); % Tire
         case 'Power'
-            v = [0 0 0; 120 0 0; 120 70 0; 0 70 0; 0 0 50; 120 0 50; 120 70 50; 0 70 50];
+            % Centered Battery
+            v = [-60 -35 0; 60 -35 0; 60 35 0; -60 35 0; -60 -35 50; 60 -35 50; 60 35 50; -60 35 50];
             f = [1 2 6 5; 2 3 7 6; 3 4 8 7; 4 1 5 8; 1 2 3 4; 5 6 7 8];
             patch(ax_3d, 'Faces', f, 'Vertices', v, 'FaceColor', [0.1 0.7 0.2], 'EdgeColor', 'k');
-            text(ax_3d, 60, 35, 60, 'POWER SYSTEM', 'Color', 'w', 'HorizontalAlignment', 'center');
         case 'Bolt'
-            [X, Y, Z] = cylinder([10 10], 20); Z = Z * -70;
+            % Centered Bolt
+            [X, Y, Z] = cylinder([10 10], 20); Z = Z * 60;
             surf(ax_3d, X, Y, Z, 'FaceColor', [0.8 0.8 0.8], 'EdgeColor', 'none');
             t = linspace(0, 2*pi, 7);
-            fill3(ax_3d, 20*cos(t), 20*sin(t), zeros(size(t)), [0.6 0.6 0.6]);
-            text(ax_3d, 0, 0, 30, 'BOLT & JOINT', 'Color', 'w', 'HorizontalAlignment', 'center');
+            fill3(ax_3d, 20*cos(t), 20*sin(t), ones(size(t))*60, [0.6 0.6 0.6]); % Head
     end
+    
+    % 🌟 FINAL POLISH: Auto-Zoom to ensure visibility
     view(ax_3d, 3); axis(ax_3d, 'tight'); axis(ax_3d, 'equal');
-    camlight(ax_3d, 'headlight'); material(ax_3d, 'shiny');
+    camlight(ax_3d, 'headlight'); material(ax_3d, 'shiny'); grid(ax_3d, 'on');
 end
