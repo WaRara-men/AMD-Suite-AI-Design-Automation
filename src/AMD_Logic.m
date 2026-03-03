@@ -1,5 +1,5 @@
 % ==========================================
-% Algo-Mech Designer (AMD) Suite - Logic v15.2
+% Algo-Mech Designer (AMD) Suite - Logic v16.0
 % ==========================================
 function [req_val, comp, catalog, b_idx, m_name, m_unit] = AMD_Logic(inputs, mode, project_root)
     g = 9.81;
@@ -23,15 +23,14 @@ function [req_val, comp, catalog, b_idx, m_name, m_unit] = AMD_Logic(inputs, mod
         case 'Power'
             catalog = readtable(fullfile(project_root, 'data', 'Battery_Catalog.csv'));
             curr = inputs(1); hrs = inputs(2); volt = inputs(3); budget = inputs(4);
-            req_val = curr * hrs * 1000 * 1.2; % mAh
+            req_val = curr * hrs * 1000 * 1.2; 
             m_name = 'Capacity'; m_unit = 'mAh'; vals = catalog.Capacity_mAh;
         case 'Bolt'
             catalog = readtable(fullfile(project_root, 'data', 'Bolt_Catalog.csv'));
             load = inputs(1); num = inputs(2); budget = inputs(4);
-            req_val = (load * g * 2.0) / num; % Safety 2.0
+            req_val = (load * g * 2.0) / num;
             m_name = 'Shear Force'; m_unit = 'N'; vals = catalog.MaxShear_N;
     end
-
     feasible = find(vals >= req_val & catalog.Price_JPY <= budget);
     if isempty(feasible), [~, b_idx] = min(catalog.Price_JPY); else, [~, s_idx] = min(catalog.Weight_kg(feasible)); b_idx = feasible(s_idx); end
     comp = catalog(b_idx, :);
