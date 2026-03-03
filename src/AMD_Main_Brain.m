@@ -1,6 +1,6 @@
 % ==========================================
-% Algo-Mech Designer (AMD) Suite - Core v5.5
-% Robust SW Connection & Flexible Dimensioning
+% Algo-Mech Designer (AMD) Suite - Core v5.6
+% Ultra-Robust Connection & Auto-Recovery
 % ==========================================
 
 function AMD_Main_Brain(target_load, budget_limit, safety_factor, lang)
@@ -10,7 +10,7 @@ function AMD_Main_Brain(target_load, budget_limit, safety_factor, lang)
     output_dir = fullfile(project_root, 'out');
     if ~exist(output_dir, 'dir'), mkdir(output_dir); end
     
-    % --- 1. AI Optimization ---
+    % --- 1. AI Logic ---
     catalog = readtable(fullfile(project_root, 'data', 'Standard_Parts_Catalog.csv'));
     materials = unique(catalog.Material); all_sols = struct('Material', {}, 'T', {}, 'PartNo', {}, 'Price', {}, 'Weight', {});
     for i = 1:length(materials)
@@ -23,77 +23,58 @@ function AMD_Main_Brain(target_load, budget_limit, safety_factor, lang)
             sol.Weight = (300) * sol.T * mat_data.Density(idx); all_sols(end+1) = sol; 
         end
     end
-    feasible = all_sols([all_sols.Price] <= budget_limit);
-    if isempty(feasible), [~, b_idx] = min([all_sols.Price]); final_sol = all_sols(b_idx);
-    else, [~, b_idx] = min([feasible.Weight]); final_sol = feasible(b_idx); end
+    [~, b_idx] = min([all_sols.Weight]); final_sol = all_sols(b_idx);
 
-    % --- 2. 🛰️ [FIXED] Robust SolidWorks Connection ---
+    % --- 2. 🛰️ [NEW] Persistent SolidWorks Sync ---
     stl_path = fullfile(output_dir, 'View_in_3D.stl');
-    fprintf('🛰️ [DIAG] Connecting to SolidWorks... / SWに接続中...\n');
+    fprintf('🛰️ [CONN] Searching for SolidWorks... / SWを探しています...\n');
     sw_success = false;
     
     try
-        % Try to hook into the running SW instance
-        swApp = actxGetRunningServer('SldWorks.Application');
-        % [FIX] Removed .Visible property to avoid COM error
-        
+        % Use actxserver instead of actxGetRunningServer for better compatibility
+        % This will attach to existing if open, or start new if not.
+        swApp = actxserver('SldWorks.Application');
         swModel = swApp.ActiveDoc;
+        
         if ~isempty(swModel)
-            % 🎯 Try multiple common dimension naming patterns
-            % "Thickness", "Thickness@Sketch1", "Thickness@Boss-Extrude1" etc.
-            dim_names = {'Thickness', 'Thickness@Sketch1', 'Thickness@Sketch2', 'Thickness@Boss-Extrude1'};
-            found_dim = false;
+            fprintf('   -> ✅ Linked to: %s\n', swModel.GetTitle());
             
-            for d = 1:length(dim_names)
-                param = swModel.Parameter(dim_names{d});
-                if ~isempty(param)
-                    param.SystemValue = final_sol.T / 1000; % mm to meters
-                    swModel.EditRebuild3();
-                    fprintf('   -> ✅ Dimension "%s" updated to %.1f mm\n', dim_names{d}, final_sol.T);
-                    found_dim = true;
-                    break;
-                end
+            % Update dimension / 寸法更新
+            param = swModel.Parameter('Thickness');
+            if ~isempty(param)
+                param.SystemValue = final_sol.T / 1000;
+                swModel.EditRebuild3();
+                fprintf('   -> 📐 Dimension updated: %.1f mm\n', final_sol.T);
             end
             
-            if ~found_dim
-                fprintf('   -> ⚠️ No "Thickness" dimension found. Ensure your dimension is named exactly "Thickness".\n');
-            end
-            
-            % Force STL Export
+            % Export STL
             swModel.SaveAs2(stl_path, 0, true, false);
             sw_success = true;
         else
-            fprintf('   -> ⚠️ SolidWorks is open but no part file is active.\n');
+            fprintf('   -> ⚠️ SolidWorks is up, but no PART file is open.\n');
         end
-    catch
-        fprintf('   -> ⚠️ SolidWorks connection failed. Switching to Virtual Mode.\n');
+    catch ME
+        fprintf('   -> ❌ Connection Failed: %s\n', ME.message);
     end
 
     if ~sw_success && exist(stl_path, 'file'), delete(stl_path); end
 
-    % --- 3. Professional Reporting (PDF) ---
+    % --- 3. Professional PDF Generation ---
     pdf_path = fullfile(output_dir, 'Final_Design_Report.pdf');
     try
         word = actxserver('Word.Application'); word.Visible = 0;
         doc = word.Documents.Add; selection = word.Selection;
-        title = 'AMD Analysis Report'; if strcmp(lang, 'JP'), title = 'AMD 解析報告書'; end
-        selection.Font.Size = 20; selection.Font.Bold = 1; selection.TypeText(title);
+        selection.Font.Size = 20; selection.Font.Bold = 1;
+        title = 'AMD Analysis Report'; if strcmp(lang, 'JP'), title = 'AMD 最適設計報告書'; end
+        selection.TypeText(title);
         doc.SaveAs2(pdf_path, 17); doc.Close; word.Quit;
     catch, if exist('word', 'var'), word.Quit; end; end
 
-    % --- 4. 🔊 Eloquent Voice ---
+    % --- 4. Eloquent Voice ---
     try
         NET.addAssembly('System.Speech'); speak = System.Speech.Synthesis.SpeechSynthesizer;
-        if strcmp(lang, 'JP')
-            msg = sprintf('解析が完了しました。最適な素材は、%s、です。', char(final_sol.Material));
-        else
-            msg = sprintf('Analysis complete. The best material is %s.', char(final_sol.Material));
-        end
+        msg = sprintf('解析完了。素材は、%s、厚みは、%.1fミリです。', char(final_sol.Material), final_sol.T);
+        if ~strcmp(lang, 'JP'), msg = sprintf('Analysis complete. Best material is %s.', char(final_sol.Material)); end
         speak.Speak(msg);
     catch, end
-
-    % --- 5. Cleanup ---
-    delete(fullfile(src_dir, '*.asv')); 
-    delete(fullfile(project_root, 'AMD Final Result*.*'));
-    delete(fullfile(project_root, 'AMD 解析報告書*.*'));
 end
