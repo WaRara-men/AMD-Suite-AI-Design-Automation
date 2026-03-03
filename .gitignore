@@ -1,23 +1,13 @@
-# MATLAB
+# MATLAB temporary files
 *.asv
 *.m~
 *.slxc
 *.mex*
-*.p
-*.p.p
-*.log
-resources/
-_out/
 
-# MS Word & Office
-~$*
-.docx#
+# Output directory (Keep the folder, ignore the content)
+out/*
+!out/.gitkeep
 
-# AMD Suite Generated Files (Managed by code, not Git)
-AMD_Design_Report.docx
-Bridge_Nerve.csv
-ai_analysis_plot.png
-
-# Windows
+# OS generated files
+.DS_Store
 Thumbs.db
-Desktop.ini
