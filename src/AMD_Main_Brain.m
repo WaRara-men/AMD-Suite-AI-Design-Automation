@@ -1,151 +1,116 @@
-% == == == == == == == == == == == == == == == == == == == == == == == == == ==
-    == == == == == == == == == ==
-    = % Algo - Mech Designer(AMD) Suite -
-      Core v3.0(Enterprise Edition) % Full Automation : JSON Settings,
-    Safety Factor &SW Capture %
-            -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -%
-            Description
-    : %
-      Central intelligence module.Decouples parameters from logic using JSON.%
-        == == == == == == == == == == == == == == == == == == == == == == == ==
-        == == == == == == == == == == == ==
-    =
+% ==========================================
+% Algo-Mech Designer (AMD) Suite - Core v3.6
+% Bug Fix: Dot Indexing & Empty Solutions
+% ==========================================
 
-        % -- -0. Path &
-        Config Setup / パスと設定の読み込み-- -
-            fprintf(
-                '\n⚙️  Loading AMD Suite v3.0... / システムを読み込み中...\n');
+function AMD_Main_Brain(target_load, budget_limit, safety_factor)
+    % --- 0. Path Setup ---
+    src_dir = fileparts(mfilename('fullpath'));
+    project_root = fileparts(src_dir);
+    data_dir = fullfile(project_root, 'data');
+    output_dir = fullfile(project_root, 'out');
+    if ~exist(output_dir, 'dir'), mkdir(output_dir); end
+    
+    % --- 1. Load Data & Optimize ---
+    case_width = 150; 
+    catalog = readtable(fullfile(data_dir, 'Standard_Parts_Catalog.csv'));
+    materials = unique(catalog.Material);
+    
+    % Initialize all_solutions as an empty struct array to avoid indexing errors
+    all_solutions = struct('Material', {}, 'T', {}, 'PartNo', {}, 'Price', {}, 'Weight', {});
 
-% Load JSON settings config_file = 'settings.json';
-% Assuming folder is in path via setup.m if isempty (which(config_file))
-        error('❌ Cannot find settings.json. Please run setup.m first!');
+    for i = 1:length(materials)
+        mat_data = catalog(strcmp(catalog.Material, materials{i}), :);
+        min_t_req = (target_load / mat_data.StrengthFactor(1)) * 0.1 * safety_factor;
+        valid_idx = find(mat_data.Thickness >= min_t_req, 1, 'first');
+        if ~isempty(valid_idx)
+            sol.Material = string(materials{i});
+            sol.T = mat_data.Thickness(valid_idx);
+            sol.PartNo = string(mat_data.PartNumber{valid_idx});
+            sol.Price = mat_data.Price_JPY(valid_idx);
+            sol.Weight = (case_width * 2) * sol.T * mat_data.Density(valid_idx);
+            all_solutions(end+1) = sol; % Standard struct array append
+        end
+    end
+
+    % --- 2. Decision Making (Safe version) ---
+    if isempty(all_solutions)
+        msgbox('No material found for this load! / 条件に合う素材が見つかりません', 'AMD Error');
+        return;
+    end
+
+    feasible_sols = all_solutions([all_solutions.Price] <= budget_limit);
+    
+    if isempty(feasible_sols)
+        % No solution within budget, pick the cheapest overall
+        [~, b_idx] = min([all_solutions.Price]);
+        final_sol = all_solutions(b_idx);
+        fprintf('⚠️ [AI] Over budget! Picked cheapest: %s\n', final_sol.Material);
+    else
+        % Lightest among within budget
+        [~, b_idx] = min([feasible_sols.Weight]);
+        final_sol = feasible_sols(b_idx);
+    end
+
+    % --- 3. History Logging ---
+    history_file = fullfile(output_dir, 'design_history.csv');
+    new_entry = table(datetime('now'), target_load, budget_limit, safety_factor, ...
+        final_sol.Material, final_sol.Weight, final_sol.Price, ...
+        'VariableNames', {'Timestamp', 'Load', 'Budget', 'SF', 'Material', 'Weight', 'Price'});
+    
+    if exist(history_file, 'file')
+        history_table = readtable(history_file);
+        history_table = [history_table; new_entry];
+    else
+        history_table = new_entry;
+    end
+    writetable(history_table, history_file);
+
+    % --- 4. Sensitivity Analysis Plot ---
+    load_range = linspace(target_load*0.5, target_load*1.5, 10);
+    fig = figure('Visible', 'off'); hold on;
+    for i = 1:length(materials)
+        mat_data = catalog(strcmp(catalog.Material, materials{i}), :);
+        w_trend = [];
+        for l = load_range
+            t_req = (l / mat_data.StrengthFactor(1)) * 0.1 * safety_factor;
+            v_idx = find(mat_data.Thickness >= t_req, 1, 'first');
+            if ~isempty(v_idx), w_trend(end+1) = (case_width*2) * mat_data.Thickness(v_idx) * mat_data.Density(v_idx);
+            else w_trend(end+1) = NaN; end
+        end
+        plot(load_range, w_trend, '-o', 'DisplayName', char(materials{i}), 'LineWidth', 1.5);
+    end
+    xline(target_load, '--k', 'Current', 'LabelVerticalAlignment', 'bottom');
+    grid on; xlabel('Load [kg]'); ylabel('Weight [kg]'); title('Sensitivity Analysis');
+    legend('Location', 'best');
+    graph_path = fullfile(output_dir, 'sensitivity_plot.png');
+    saveas(fig, graph_path); close(fig);
+
+    % --- 5. Save Results (Nerve) ---
+    T_bridge = cell2table({final_sol.T, char(final_sol.Material), final_sol.Price}, ...
+        'VariableNames', {'Thickness', 'Material', 'Price'});
+    writetable(T_bridge, fullfile(output_dir, 'Bridge_Nerve.csv'));
+    
+    % --- 6. Report Generation ---
+    report_name = 'AMD_Decision_Report.docx';
+    report_path = fullfile(output_dir, report_name);
+    try
+        word = actxserver('Word.Application'); word.Visible = 0;
+        doc = word.Documents.Add; selection = word.Selection;
+        selection.Font.Size = 20; selection.Font.Bold = 1;
+        selection.TypeText('AMD Design Insights Report'); selection.TypeParagraph;
+        selection.Font.Size = 12; selection.Font.Bold = 0;
+        selection.TypeText(sprintf('Best Choice: %s (Weight: %.3f kg)', final_sol.Material, final_sol.Weight));
+        selection.TypeParagraph;
+        selection.InlineShapes.AddPicture(graph_path);
+        doc.SaveAs2(report_path); doc.Close; word.Quit;
+        fprintf('✅ [REPORT] Generated: %s\n', report_path);
+    catch
+        if exist('word', 'var'), word.Quit; end
+    end
+
+    box_path = fullfile(getenv('USERPROFILE'), 'Box', 'AMD_Reports');
+    if exist(box_path, 'dir'), copyfile(report_path, fullfile(box_path, report_name)); end
+    
+    msgbox(['Analysis Complete!', newline, 'Winner: ', char(final_sol.Material)], 'AMD Suite Status');
 end
-
-    try settings_json = fileread(which(config_file));
-cfg = jsondecode(settings_json);
-fprintf(
-    '   - Configuration loaded successfully. / 設定ファイルの読み込み完了。\n');
-catch ME error('❌ Failed to parse settings.json: %s', ME.message);
-end
-
-    % Extract parameters dcfg = cfg.design_parameters;
-pcfg = cfg.paths;
-pref = cfg.preferences;
-
-% Ensure output directory exists relative to root root_dir =
-    fileparts(fileparts(mfilename('fullpath')));
-% Up one from src / output_path = fullfile(root_dir, pcfg.output_dir);
-if
-  ~exist(output_path, 'dir'), mkdir(output_path);
-end
-
-        % -- -1. Design Calculations / 設計計算-- -
-    required_reach = sqrt(dcfg.target_x ^ 2 + dcfg.target_y ^ 2);
-fprintf(
-    '🧠 [AI] Optimizing for reach: %.1f mm with SF: %.1f... / 最適化中...\n',
-    ... required_reach, dcfg.safety_factor);
-
-% Objective : Minimize Weight(Simple Example) obj_func =
-    @(x)(x(1) * x(3) + x(2) * x(4)) * dcfg.density;
-
-lb = [ 50, 50, 1.0, 1.0 ];
-ub = [ 400, 400, 10.0, 10.0 ];
-
-A = [ -1, -1, 0, 0 ];
-b = -required_reach;
-
-try options = optimoptions('ga', 'Display', 'none');
-[ x_opt, ~] = ga(obj_func, 4, A, b, [], [], lb, ub, [], options);
-catch x_opt = [ required_reach / 2, required_reach / 2, 3.0, 2.0 ];
-end
-
-    % Apply Safety Factor to thickness results
-          x_opt(3 : 4) = x_opt(3 : 4) * dcfg.safety_factor;
-
-% -- -2. Catalog Selection / カタログ選定-- - try catalog =
-    readtable(fullfile(root_dir, pcfg.data_dir, pcfg.catalog_file));
-
-idx1 = find(catalog.Thickness >= x_opt(3), 1, 'first');
-if isempty (idx1)
-  , idx1 = height(catalog);
-end selected_t1 = catalog.Thickness(idx1);
-part_no1 = catalog.PartNumber{idx1};
-
-idx2 = find(catalog.Thickness >= x_opt(4), 1, 'first');
-if isempty (idx2)
-  , idx2 = height(catalog);
-end selected_t2 = catalog.Thickness(idx2);
-part_no2 = catalog.PartNumber{idx2};
-catch ME warning('⚠️ Data catalog load failed: %s. Using raw thickness.',
-                 ME.message);
-selected_t1 = x_opt(3);
-part_no1 = 'RAW';
-selected_t2 = x_opt(4);
-part_no2 = 'RAW';
-end
-
-        % -- -3. SolidWorks Auto -
-    Capture / SW自動撮影-- -
-    sw_image_path = fullfile(output_path, 'sw_capture.png');
-if pref
-  .auto_capture_sw
-      fprintf('📸 [SW] Capturing SolidWorks active model... / 撮影中...\n');
-try swApp = actxGetRunningServer('SldWorks.Application');
-swModel = swApp.ActiveDoc;
-if
-  ~isempty(swModel) swModel.SaveAs2(sw_image_path, 0, true, false);
-fprintf('   -> ✅ Capture Success! / 撮影成功！\n');
-end catch fprintf(
-    '   -> ⚠️ SolidWorks integration skipped. / 連携をスキップしました。\n');
-end end
-
-        % -- -4. Export &Reporting / 書き出しとレポート-- -
-    % Data Bridge T_bridge =
-    table(x_opt(1), x_opt(2), selected_t1, selected_t2, ... 'VariableNames',
-          {'L1', 'L2', 'T1', 'T2'});
-writetable(T_bridge, fullfile(output_path, 'Bridge_Nerve.csv'));
-
-% Word Report if pref.generate_word_report try word =
-    actxserver('Word.Application');
-word.Visible = 0;
-doc = word.Documents.Add;
-selection = word.Selection;
-
-selection.Font.Size = 24;
-selection.Font.Bold = 1;
-selection.TypeText('AMD Enterprise Design Report');
-selection.TypeParagraph;
-
-selection.Font.Size = 12;
-selection.Font.Bold = 1;
-selection.TypeText(sprintf('Shielded by Safety Factor: %.2f',
-                           dcfg.safety_factor));
-selection.TypeParagraph;
-selection.TypeParagraph;
-
-selection.Font.Bold = 0;
-selection.TypeText(sprintf('Link 1: L=%.1f, T=%.1f (%s)', x_opt(1), selected_t1,
-                           part_no1));
-selection.TypeParagraph;
-selection.TypeText(sprintf('Link 2: L=%.1f, T=%.1f (%s)', x_opt(2), selected_t2,
-                           part_no2));
-selection.TypeParagraph;
-
-if exist (sw_image_path, 'file')
-  selection.TypeParagraph;
-selection.InlineShapes.AddPicture(sw_image_path);
-end
-
-    report_path = fullfile(output_path, 'AMD_Design_Report.docx');
-if exist (report_path, 'file')
-  , delete (report_path);
-end doc.SaveAs2(report_path);
-doc.Close;
-word.Quit;
-fprintf('📄 [REPORT] Enterprise report generated in /out.\n');
-catch ME fprintf('❌ [REPORT] Failed: %s\n', ME.message);
-if exist ('word', 'var')
-  , word.Quit;
-end end end
-
-    fprintf('\n✨ All processes completed / すべての工程が完了しました\n');
