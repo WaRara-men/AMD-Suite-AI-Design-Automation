@@ -1,5 +1,5 @@
 % ==========================================
-% Algo-Mech Designer (AMD) Suite - Logic v16.0
+% Algo-Mech Designer (AMD) Suite - Logic v17.0
 % ==========================================
 function [req_val, comp, catalog, b_idx, m_name, m_unit] = AMD_Logic(inputs, mode, project_root)
     g = 9.81;
@@ -23,7 +23,7 @@ function [req_val, comp, catalog, b_idx, m_name, m_unit] = AMD_Logic(inputs, mod
         case 'Power'
             catalog = readtable(fullfile(project_root, 'data', 'Battery_Catalog.csv'));
             curr = inputs(1); hrs = inputs(2); volt = inputs(3); budget = inputs(4);
-            req_val = curr * hrs * 1000 * 1.2; 
+            req_val = curr * hrs * 1000 * 1.2; % mAh
             m_name = 'Capacity'; m_unit = 'mAh'; vals = catalog.Capacity_mAh;
         case 'Bolt'
             catalog = readtable(fullfile(project_root, 'data', 'Bolt_Catalog.csv'));
