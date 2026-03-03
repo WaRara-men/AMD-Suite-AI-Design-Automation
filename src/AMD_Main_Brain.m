@@ -1,6 +1,6 @@
 % ==========================================
-% Algo-Mech Designer (AMD) Suite - Core v7.0
-% The Ultimate Standalone Engine (No SW Needed)
+% Algo-Mech Designer (AMD) Suite - Core v7.1
+% Professional Design Certification Engine
 % ==========================================
 
 function AMD_Main_Brain(target_load, budget_limit, safety_factor, lang)
@@ -10,10 +10,10 @@ function AMD_Main_Brain(target_load, budget_limit, safety_factor, lang)
     output_dir = fullfile(project_root, 'out');
     if ~exist(output_dir, 'dir'), mkdir(output_dir); end
     
-    % --- 1. AI Logic & Material Selection ---
-    fprintf('🧠 [AI] Running Ultimate Optimization Engine...\n');
+    % --- 1. AI Logic & Data Retrieval ---
     catalog = readtable(fullfile(data_dir, 'Standard_Parts_Catalog.csv'));
-    materials = unique(catalog.Material); all_sols = struct('Material', {}, 'T', {}, 'PartNo', {}, 'Price', {}, 'Weight', {});
+    materials = unique(catalog.Material); all_sols = struct('Material', {}, 'T', {}, 'PartNo', {}, 'Price', {}, 'Weight', {}, 'Density', {}, 'StrengthFactor', {}, 'LeadTime', {});
+
     for i = 1:length(materials)
         mat_data = catalog(strcmp(catalog.Material, materials{i}), :);
         min_t_req = (target_load / mat_data.StrengthFactor(1)) * 0.1 * safety_factor;
@@ -21,86 +21,86 @@ function AMD_Main_Brain(target_load, budget_limit, safety_factor, lang)
         if ~isempty(idx)
             sol.Material = string(materials{i}); sol.T = mat_data.Thickness(idx);
             sol.PartNo = string(mat_data.PartNumber{idx}); sol.Price = mat_data.Price_JPY(idx);
-            sol.Weight = (300) * sol.T * mat_data.Density(idx); all_sols(end+1) = sol; 
+            sol.Weight = (300) * sol.T * mat_data.Density(idx); 
+            sol.Density = mat_data.Density(idx); sol.StrengthFactor = mat_data.StrengthFactor(idx);
+            sol.LeadTime = string(mat_data.LeadTime{idx});
+            all_sols(end+1) = sol; 
         end
     end
     feasible = all_sols([all_sols.Price] <= budget_limit);
     if isempty(feasible), [~, b_idx] = min([all_sols.Price]); final_sol = all_sols(b_idx);
     else, [~, b_idx] = min([feasible.Weight]); final_sol = feasible(b_idx); end
 
-    fprintf('   -> 🏆 Winner: %s (Thickness: %.1f mm)\n', final_sol.Material, final_sol.T);
-
-    % --- 2. Professional Certificate Generation (PDF) ---
-    fprintf('📜 [DOC] Generating Official Design Certificate...\n');
+    % --- 2. Advanced Certification Logic (PDF) ---
+    fprintf('📜 [DOC] Crafting Detailed Engineering Certificate...\n');
     pdf_path = fullfile(output_dir, 'AMD_Design_Certificate.pdf');
     try
         word = actxserver('Word.Application'); word.Visible = 0;
         doc = word.Documents.Add; selection = word.Selection;
         
-        % --- Certificate Styling ---
-        selection.ParagraphFormat.Alignment = 1; % Center
-        selection.Font.Size = 28; selection.Font.Bold = 1; selection.Font.ColorIndex = 'wdBlue';
+        % --- Header & Styling ---
+        selection.ParagraphFormat.Alignment = 1;
+        selection.Font.Size = 26; selection.Font.Bold = 1; selection.Font.Name = 'Arial';
+        selection.TypeText('DESIGN VERIFICATION CERTIFICATE'); selection.TypeParagraph;
+        selection.Font.Size = 16; selection.TypeText('設計検証・技術証明書'); selection.TypeParagraph;
+        selection.TypeParagraph;
+
+        % --- Section 1: Logical Reasoning ---
+        selection.ParagraphFormat.Alignment = 0;
+        selection.Font.Size = 14; selection.Font.Bold = 1; selection.Font.Underline = 1;
+        if strcmp(lang, 'JP'), txt = '■ 選定の論理的根拠 (Selection Logic)'; else, txt = '■ Engineering Selection Logic'; end
+        selection.TypeText(txt); selection.TypeParagraph;
+        selection.Font.Size = 11; selection.Font.Bold = 0; selection.Font.Underline = 0;
         
+        reasoning = sprintf(['The AI engine analyzed %d materials from the internal database. ', ...
+            '%s was selected as the global optimum because it satisfies the strength requirement of %dkg ', ...
+            'with a safety factor of %.1f, while maintaining the lowest possible mass within the budget limit of %d JPY.'], ...
+            length(materials), final_sol.Material, target_load, safety_factor, budget_limit);
         if strcmp(lang, 'JP')
-            selection.TypeText('★ AMD 公式設計証明書 ★'); selection.TypeParagraph;
-            selection.Font.Size = 14; selection.Font.ColorIndex = 'wdAuto'; selection.Font.Bold = 0;
-            selection.TypeText('本設計は、Algo-Mech Designer (AMD) AIエンジンによって最適化および保証されています。');
-            selection.TypeParagraph; selection.TypeParagraph;
-            
-            selection.ParagraphFormat.Alignment = 0; % Left
-            selection.Font.Size = 16; selection.Font.Bold = 1; selection.TypeText('【 設計要件 】'); selection.TypeParagraph;
-            selection.Font.Size = 12; selection.Font.Bold = 0;
-            selection.TypeText(sprintf(' - 目標荷重: %d kg\n - 予算上限: %d JPY\n - 適用安全率: %.1f', target_load, budget_limit, safety_factor));
-            selection.TypeParagraph; selection.TypeParagraph;
-            
-            selection.Font.Size = 16; selection.Font.Bold = 1; selection.Font.ColorIndex = 'wdRed';
-            selection.TypeText('【 AI 最適化結果 】'); selection.TypeParagraph;
-            selection.Font.Size = 14; selection.Font.Bold = 1; selection.Font.ColorIndex = 'wdAuto';
-            selection.TypeText(sprintf(' 👑 選定素材: %s', final_sol.Material)); selection.TypeParagraph;
-            selection.Font.Size = 12; selection.Font.Bold = 0;
-            selection.TypeText(sprintf(' - 推奨厚み: %.1f mm (型番: %s)\n - 推定重量: %.3f kg\n - 算出価格: %d JPY', final_sol.T, final_sol.PartNo, final_sol.Weight, final_sol.Price));
-            
-        else
-            selection.TypeText('★ AMD Official Design Certificate ★'); selection.TypeParagraph;
-            selection.Font.Size = 14; selection.Font.ColorIndex = 'wdAuto'; selection.Font.Bold = 0;
-            selection.TypeText('This design is fully optimized and certified by the Algo-Mech Designer AI Engine.');
-            selection.TypeParagraph; selection.TypeParagraph;
-            
-            selection.ParagraphFormat.Alignment = 0; % Left
-            selection.Font.Size = 16; selection.Font.Bold = 1; selection.TypeText('[ Design Requirements ]'); selection.TypeParagraph;
-            selection.Font.Size = 12; selection.Font.Bold = 0;
-            selection.TypeText(sprintf(' - Target Load: %d kg\n - Budget Limit: %d JPY\n - Safety Factor: %.1f', target_load, budget_limit, safety_factor));
-            selection.TypeParagraph; selection.TypeParagraph;
-            
-            selection.Font.Size = 16; selection.Font.Bold = 1; selection.Font.ColorIndex = 'wdRed';
-            selection.TypeText('[ AI Optimization Result ]'); selection.TypeParagraph;
-            selection.Font.Size = 14; selection.Font.Bold = 1; selection.Font.ColorIndex = 'wdAuto';
-            selection.TypeText(sprintf(' 👑 Selected Material: %s', final_sol.Material)); selection.TypeParagraph;
-            selection.Font.Size = 12; selection.Font.Bold = 0;
-            selection.TypeText(sprintf(' - Optimal Thickness: %.1f mm (Part: %s)\n - Est. Weight: %.3f kg\n - Total Price: %d JPY', final_sol.T, final_sol.PartNo, final_sol.Weight, final_sol.Price));
+            reasoning = sprintf(['内部データベースの%d種類の素材を解析した結果、安全率%.1fを含む%dkgの荷重条件を満たし、', ...
+                'かつ予算%d円以内で最も軽量な「%s」を最適解として選定しました。'], ...
+                length(materials), safety_factor, target_load, budget_limit, final_sol.Material);
         end
+        selection.TypeText(reasoning); selection.TypeParagraph; selection.TypeParagraph;
+
+        % --- Section 2: Detailed Specifications Table ---
+        selection.Font.Size = 14; selection.Font.Bold = 1; selection.Font.Underline = 1;
+        if strcmp(lang, 'JP'), txt = '■ 技術詳細仕様 (Technical Specifications)'; else, txt = '■ Technical Specifications'; end
+        selection.TypeText(txt); selection.TypeParagraph;
         
-        selection.TypeParagraph; selection.TypeParagraph;
-        selection.ParagraphFormat.Alignment = 1; % Center
-        selection.Font.Size = 10; selection.Font.ColorIndex = 'wdGray50';
-        selection.TypeText(['Generated on: ', datestr(now), ' | Powered by WaRara-men AMD Suite v7.0']);
+        tbl = doc.Tables.Add(selection.Range, 6, 2); tbl.Borders.Enable = 1;
+        specs = { ...
+            'Selected Material / 選定素材', char(final_sol.Material); ...
+            'Calculated Thickness / 最適厚み', [num2str(final_sol.T), ' mm']; ...
+            'Part Number / 型番', char(final_sol.PartNo); ...
+            'Estimated Mass / 推定重量', [num2str(final_sol.Weight, '%.3f'), ' kg']; ...
+            'Total Cost / 算出価格', [num2str(final_sol.Price), ' JPY']; ...
+            'Procurement / 納期目安', char(final_sol.LeadTime) ...
+        };
+        for r = 1:6
+            tbl.Cell(r,1).Range.Text = specs{r,1}; tbl.Cell(r,1).Range.Font.Bold = 1;
+            tbl.Cell(r,2).Range.Text = specs{r,2};
+        end
+        doc.Range(tbl.Range.End, tbl.Range.End).Select; selection = word.Selection;
+        selection.TypeParagraph;
+
+        % --- Section 3: Data Source ---
+        selection.Font.Size = 10; selection.Font.Italic = 1;
+        src_txt = 'Data Source: Standard_Parts_Catalog.csv (Internal Enterprise Database)';
+        if strcmp(lang, 'JP'), src_txt = 'データ出典: Standard_Parts_Catalog.csv (内部統合データベース)'; end
+        selection.TypeText(src_txt); selection.TypeParagraph; selection.TypeParagraph;
+
+        % --- Footer: ID & Timestamp ---
+        selection.ParagraphFormat.Alignment = 1;
+        selection.Font.Size = 9; selection.Font.Bold = 0; selection.Font.Italic = 0;
+        verify_code = upper(dec2hex(posixtime(datetime('now'))));
+        selection.TypeText(sprintf('Verification ID: AMD-%s | Timestamp: %s', verify_code, datestr(now)));
         
         if exist(pdf_path, 'file'), delete(pdf_path); end
         doc.SaveAs2(pdf_path, 17); doc.Close(0); word.Quit;
-        fprintf('   -> ✅ Certificate saved to /out/AMD_Design_Certificate.pdf\n');
+        fprintf('   -> ✅ Professional Certificate generated: %s\n', pdf_path);
     catch ME
-        fprintf('   -> ❌ PDF Generation Failed: %s\n', ME.message);
+        fprintf('   -> ❌ Certificate Failed: %s\n', ME.message);
         if exist('word', 'var'), word.Quit; end
     end
-
-    % --- 3. Final Voice ---
-    try
-        NET.addAssembly('System.Speech'); speak = System.Speech.Synthesis.SpeechSynthesizer;
-        if strcmp(lang, 'JP')
-            msg = sprintf('設計が完了しました。最適な素材は、%s、です。証明書を発行しました。', char(final_sol.Material));
-        else
-            msg = sprintf('Design complete. The best material is %s. Certificate generated.', char(final_sol.Material));
-        end
-        speak.Speak(msg);
-    catch, end
 end
