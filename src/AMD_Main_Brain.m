@@ -1,6 +1,6 @@
 % ==========================================
-% Algo-Mech Designer (AMD) Suite - Core v5.4
-% Perfect Integration: Real Voice & Auto-Scale 3D
+% Algo-Mech Designer (AMD) Suite - Core v5.5
+% Robust SW Connection & Flexible Dimensioning
 % ==========================================
 
 function AMD_Main_Brain(target_load, budget_limit, safety_factor, lang)
@@ -10,7 +10,7 @@ function AMD_Main_Brain(target_load, budget_limit, safety_factor, lang)
     output_dir = fullfile(project_root, 'out');
     if ~exist(output_dir, 'dir'), mkdir(output_dir); end
     
-    % --- 1. AI Optimization (Full Logic Restored) ---
+    % --- 1. AI Optimization ---
     catalog = readtable(fullfile(project_root, 'data', 'Standard_Parts_Catalog.csv'));
     materials = unique(catalog.Material); all_sols = struct('Material', {}, 'T', {}, 'PartNo', {}, 'Price', {}, 'Weight', {});
     for i = 1:length(materials)
@@ -27,58 +27,73 @@ function AMD_Main_Brain(target_load, budget_limit, safety_factor, lang)
     if isempty(feasible), [~, b_idx] = min([all_sols.Price]); final_sol = all_sols(b_idx);
     else, [~, b_idx] = min([feasible.Weight]); final_sol = feasible(b_idx); end
 
-    % --- 2. 🪄 Advanced SolidWorks Sync ---
+    % --- 2. 🛰️ [FIXED] Robust SolidWorks Connection ---
     stl_path = fullfile(output_dir, 'View_in_3D.stl');
-    sw_status = 'Disconnected';
+    fprintf('🛰️ [DIAG] Connecting to SolidWorks... / SWに接続中...\n');
+    sw_success = false;
+    
     try
+        % Try to hook into the running SW instance
         swApp = actxGetRunningServer('SldWorks.Application');
+        % [FIX] Removed .Visible property to avoid COM error
+        
         swModel = swApp.ActiveDoc;
         if ~isempty(swModel)
-            % Set Dimension if exists
-            param = swModel.Parameter('Thickness');
-            if ~isempty(param)
-                param.SystemValue = final_sol.T / 1000;
-                swModel.EditRebuild3();
+            % 🎯 Try multiple common dimension naming patterns
+            % "Thickness", "Thickness@Sketch1", "Thickness@Boss-Extrude1" etc.
+            dim_names = {'Thickness', 'Thickness@Sketch1', 'Thickness@Sketch2', 'Thickness@Boss-Extrude1'};
+            found_dim = false;
+            
+            for d = 1:length(dim_names)
+                param = swModel.Parameter(dim_names{d});
+                if ~isempty(param)
+                    param.SystemValue = final_sol.T / 1000; % mm to meters
+                    swModel.EditRebuild3();
+                    fprintf('   -> ✅ Dimension "%s" updated to %.1f mm\n', dim_names{d}, final_sol.T);
+                    found_dim = true;
+                    break;
+                end
             end
-            % Force STL Export for Preview
+            
+            if ~found_dim
+                fprintf('   -> ⚠️ No "Thickness" dimension found. Ensure your dimension is named exactly "Thickness".\n');
+            end
+            
+            % Force STL Export
             swModel.SaveAs2(stl_path, 0, true, false);
-            sw_status = sprintf('Connected: %s', swModel.GetTitle());
+            sw_success = true;
+        else
+            fprintf('   -> ⚠️ SolidWorks is open but no part file is active.\n');
         end
     catch
-        if exist(stl_path, 'file'), delete(stl_path); end
+        fprintf('   -> ⚠️ SolidWorks connection failed. Switching to Virtual Mode.\n');
     end
+
+    if ~sw_success && exist(stl_path, 'file'), delete(stl_path); end
 
     % --- 3. Professional Reporting (PDF) ---
     pdf_path = fullfile(output_dir, 'Final_Design_Report.pdf');
-    temp_docx = fullfile(output_dir, 'temp_report.docx');
     try
         word = actxserver('Word.Application'); word.Visible = 0;
         doc = word.Documents.Add; selection = word.Selection;
-        selection.Font.Size = 20; selection.Font.Bold = 1;
-        if strcmp(lang, 'JP'), txt = 'AMD 最適設計結果'; else, txt = 'AMD Design Result'; end
-        selection.TypeText(txt); selection.TypeParagraph;
-        selection.Font.Size = 12; selection.Font.Bold = 0;
-        selection.TypeText(sprintf('Material: %s, Weight: %.3f kg, Price: %d JPY', final_sol.Material, final_sol.Weight, final_sol.Price));
-        if exist(temp_docx, 'file'), delete(temp_docx); end
-        doc.SaveAs2(temp_docx); doc.SaveAs2(pdf_path, 17); % Export PDF
-        doc.Close; word.Quit;
-        if exist(temp_docx, 'file'), delete(temp_docx); end
-        fprintf('📄 [REPORT] Final PDF saved: %s\n', pdf_path);
+        title = 'AMD Analysis Report'; if strcmp(lang, 'JP'), title = 'AMD 解析報告書'; end
+        selection.Font.Size = 20; selection.Font.Bold = 1; selection.TypeText(title);
+        doc.SaveAs2(pdf_path, 17); doc.Close; word.Quit;
     catch, if exist('word', 'var'), word.Quit; end; end
 
-    % --- 4. 🔊 Eloquent Voice (Restored!) ---
+    % --- 4. 🔊 Eloquent Voice ---
     try
         NET.addAssembly('System.Speech'); speak = System.Speech.Synthesis.SpeechSynthesizer;
         if strcmp(lang, 'JP')
-            msg = sprintf('解析が完了しました。最適な素材は、%s、です。価格は、%d円、で、予算内に収まりました。', char(final_sol.Material), final_sol.Price);
+            msg = sprintf('解析が完了しました。最適な素材は、%s、です。', char(final_sol.Material));
         else
-            msg = sprintf('Analysis complete. The best material is %s, costing %d yen. It is within budget.', char(final_sol.Material), final_sol.Price);
+            msg = sprintf('Analysis complete. The best material is %s.', char(final_sol.Material));
         end
         speak.Speak(msg);
     catch, end
 
     % --- 5. Cleanup ---
     delete(fullfile(src_dir, '*.asv')); 
-    delete(fullfile(project_root, 'AMD Final Result*.*')); % Remove stray files
+    delete(fullfile(project_root, 'AMD Final Result*.*'));
     delete(fullfile(project_root, 'AMD 解析報告書*.*'));
 end
