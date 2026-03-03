@@ -1,93 +1,141 @@
 % ==========================================
-% Algo-Mech Designer (AMD) Suite - App v14.0
-% THE ZENITH: All Tabs Active, All Features Fixed
+% Algo-Mech Designer (AMD) Suite - App v15.0
+% THE OMNIPOTENT 5-TAB CONTROLLER
 % ==========================================
 
 function AMD_App()
     src_dir = fileparts(mfilename('fullpath')); project_root = fileparts(src_dir);
-    data_path = fullfile(project_root, 'data', 'Standard_Parts_Catalog.csv');
     output_dir = fullfile(project_root, 'out'); addpath(src_dir); addpath(fullfile(src_dir, 'modules'));
 
-    % --- Theme ---
-    bg = [0.03 0.03 0.05]; pnl_bg = [0.08 0.08 0.12]; txt = [0.98 0.98 0.98];
-    fig = uifigure('Name', 'AMD Suite v14.0 - ROBOT ZENITH CENTER', 'Position', [50 50 1350 800], 'Color', bg);
-    current_lang = 'JP';
+    bg_color = [0.05 0.05 0.08]; panel_bg = [0.1 0.1 0.15]; txt_color = [0.95 0.95 0.95];
+    fig = uifigure('Name', 'AMD Suite v15.0 - OMNIPOTENT ROBOT CENTER', 'Position', [100 100 1300 750], 'Color', bg_color);
 
-    % --- Header ---
-    uilabel(fig, 'Text', '🚀 AMD ROBOT DESIGN ZENITH', 'FontSize', 26, 'FontWeight', 'bold', 'Position', [20 750 600 40], 'FontColor', [1.0 0.5 0.0]);
-    btn_lang = uibutton(fig, 'push', 'Text', '🌐 Switch Language', 'Position', [1180 755 150 30]);
+    % --- Top Bar ---
+    uilabel(fig, 'Text', '💎 AMD SUITE v15.0: THE OMNIPOTENT DESIGNER', 'FontSize', 22, 'FontWeight', 'bold', 'Position', [20 705 600 35], 'FontColor', [0.3 0.8 1.0]);
 
-    % --- 🌟 5-TAB SYSTEM (FULL RESTORE) ---
-    tg = uitabgroup(fig, 'Position', [20 120 400 620]);
-    tab_arm = uitab(tg, 'Title', '🦾 Robot Arm');
-    tab_lift = uitab(tg, 'Title', '🏗️ Lifting Stage');
-    tab_mobile = uitab(tg, 'Title', '🏎️ Mobile Base');
-    tab_power = uitab(tg, 'Title', '🔋 Power System');
-    tab_bolt = uitab(tg, 'Title', '🔩 Bolt & Joint');
+    % --- Tabs ---
+    tg = uitabgroup(fig, 'Position', [20 120 350 570]);
+    tab_arm = uitab(tg, 'Title', '🦾 Arm'); tab_lift = uitab(tg, 'Title', '🏗️ Lift');
+    tab_mobile = uitab(tg, 'Title', '🏎️ Mobile'); tab_power = uitab(tg, 'Title', '🔋 Power'); tab_bolt = uitab(tg, 'Title', '🔩 Bolt');
 
-    % --- Helper for Tab Panels (GUARANTEED WHITE TEXT) ---
-    function p = build_tab(tab, title, desc)
-        p = uipanel(tab, 'BackgroundColor', pnl_bg, 'ForegroundColor', txt, 'Position', [0 0 400 590], 'Title', title);
-        uilabel(p, 'Text', desc, 'Position', [10 540 380 22], 'FontColor', [0.5 1.0 0.5], 'FontAngle', 'italic');
+    % --- Panel Builder ---
+    function p = create_pnl(tab, title, desc)
+        p = uipanel(tab, 'BackgroundColor', panel_bg, 'ForegroundColor', txt_color, 'Position', [0 0 350 540], 'Title', title);
+        uilabel(p, 'Text', desc, 'Position', [10 490 330 22], 'FontColor', [0.6 0.9 0.6], 'FontAngle', 'italic');
     end
 
-    % 1. Arm Tab
-    p_arm = build_tab(tab_arm, 'Robot Arm', '旋回トルクと自重を精密計算 / Rotational torque & mass.');
-    uilabel(p_arm, 'Text', 'Payload [kg]:', 'Position', [20 480 150 22], 'FontColor', 'w');
-    sld_load = uislider(p_arm, 'Limits', [0.1 10.0], 'Value', 2.0, 'Position', [30 460 340 3], 'FontColor', 'w');
-    uilabel(p_arm, 'Text', 'Arm Length [mm]:', 'Position', [20 390 150 22], 'FontColor', 'w');
-    sld_len = uislider(p_arm, 'Limits', [50 1000], 'Value', 300, 'Position', [30 370 340 3], 'FontColor', 'w');
-    uilabel(p_arm, 'Text', 'Rod Radius [mm]:', 'Position', [20 300 150 22], 'FontColor', 'w');
-    sld_rad = uislider(p_arm, 'Limits', [2 50], 'Value', 10, 'Position', [30 280 340 3], 'FontColor', 'w');
-    uilabel(p_arm, 'Text', 'Budget [JPY]:', 'Position', [20 210 150 22], 'FontColor', 'w');
-    sld_budget = uislider(p_arm, 'Limits', [1000 50000], 'Value', 15000, 'Position', [30 190 340 3], 'FontColor', 'w');
+    % 1. Arm
+    p_arm = create_pnl(tab_arm, 'Robot Arm', 'アームのトルクと自重を計算');
+    u_arm = [
+        uislider(p_arm, 'Limits', [0.1 10], 'Value', 2, 'Position', [30 430 280 3], 'FontColor', 'w'), ...
+        uislider(p_arm, 'Limits', [50 1000], 'Value', 300, 'Position', [30 350 280 3], 'FontColor', 'w'), ...
+        uislider(p_arm, 'Limits', [2 50], 'Value', 10, 'Position', [30 270 280 3], 'FontColor', 'w'), ...
+        uislider(p_arm, 'Limits', [1000 50000], 'Value', 15000, 'Position', [30 190 280 3], 'FontColor', 'w')
+    ];
+    uilabel(p_arm, 'Text', 'Payload [kg]', 'Position', [30 445 100 22], 'FontColor', 'w');
+    uilabel(p_arm, 'Text', 'Length [mm]', 'Position', [30 365 100 22], 'FontColor', 'w');
+    uilabel(p_arm, 'Text', 'Radius [mm]', 'Position', [30 285 100 22], 'FontColor', 'w');
+    uilabel(p_arm, 'Text', 'Budget [JPY]', 'Position', [30 205 100 22], 'FontColor', 'w');
 
-    % 2. Lift Tab (RESTORED)
-    p_lift = build_tab(tab_lift, 'Lifting Stage', '荷物を垂直に引き上げる力を計算 / Vertical lift force.');
-    uilabel(p_lift, 'Text', 'Vertical Payload [kg]:', 'Position', [20 480 200 22], 'FontColor', 'w');
-    sld_load_l = uislider(p_lift, 'Limits', [0.1 50.0], 'Value', 5.0, 'Position', [30 460 340 3], 'FontColor', 'w');
+    % 2. Lift
+    p_lift = create_pnl(tab_lift, 'Lifting Stage', '垂直昇降の巻上トルクを計算');
+    u_lift = [
+        uislider(p_lift, 'Limits', [1 50], 'Value', 5, 'Position', [30 430 280 3], 'FontColor', 'w'), ...
+        uislider(p_lift, 'Limits', [10 100], 'Value', 30, 'Position', [30 350 280 3], 'FontColor', 'w'), ...
+        uislider(p_lift, 'Limits', [0 10], 'Value', 0, 'Position', [30 270 280 3], 'FontColor', 'w', 'Visible', 'off'), ...
+        uislider(p_lift, 'Limits', [1000 50000], 'Value', 15000, 'Position', [30 190 280 3], 'FontColor', 'w')
+    ];
+    uilabel(p_lift, 'Text', 'Vertical Payload [kg]', 'Position', [30 445 150 22], 'FontColor', 'w');
+    uilabel(p_lift, 'Text', 'Pulley Radius [mm]', 'Position', [30 365 150 22], 'FontColor', 'w');
+    uilabel(p_lift, 'Text', 'Budget [JPY]', 'Position', [30 205 100 22], 'FontColor', 'w');
 
-    % 3. Mobile Tab (RESTORED)
-    p_mobile = build_tab(tab_mobile, 'Mobile Base', '走行に必要なタイヤの駆動力を計算 / Wheel driving force.');
-    uilabel(p_mobile, 'Text', 'Total Weight [kg]:', 'Position', [20 480 200 22], 'FontColor', 'w');
-    sld_load_m = uislider(p_mobile, 'Limits', [1 100], 'Value', 10, 'Position', [30 460 340 3], 'FontColor', 'w');
+    % 3. Mobile
+    p_mobile = create_pnl(tab_mobile, 'Mobile Base', '走行車輪の駆動力と斜面摩擦');
+    u_mob = [
+        uislider(p_mobile, 'Limits', [1 100], 'Value', 20, 'Position', [30 430 280 3], 'FontColor', 'w'), ...
+        uislider(p_mobile, 'Limits', [20 200], 'Value', 50, 'Position', [30 350 280 3], 'FontColor', 'w'), ...
+        uislider(p_mobile, 'Limits', [0 45], 'Value', 15, 'Position', [30 270 280 3], 'FontColor', 'w'), ...
+        uislider(p_mobile, 'Limits', [1000 50000], 'Value', 15000, 'Position', [30 190 280 3], 'FontColor', 'w')
+    ];
+    uilabel(p_mobile, 'Text', 'Total Robot Weight [kg]', 'Position', [30 445 200 22], 'FontColor', 'w');
+    uilabel(p_mobile, 'Text', 'Wheel Radius [mm]', 'Position', [30 365 150 22], 'FontColor', 'w');
+    uilabel(p_mobile, 'Text', 'Incline Angle [deg]', 'Position', [30 285 150 22], 'FontColor', 'w');
+    uilabel(p_mobile, 'Text', 'Budget [JPY]', 'Position', [30 205 100 22], 'FontColor', 'w');
 
-    % --- Result Panels ---
-    p_ana = uipanel(fig, 'Title', 'AI Result Dashboard', 'Position', [435 120 380 620], 'BackgroundColor', pnl_bg, 'ForegroundColor', txt);
-    lbl_status = uilabel(p_ana, 'Text', 'Best: ---', 'FontSize', 18, 'FontWeight', 'bold', 'Position', [20 560 340 40], 'FontColor', [0.2 0.9 1.0]);
-    lbl_phys = uilabel(p_ana, 'Text', 'Wait for input...', 'FontSize', 11, 'Position', [20 530 340 30], 'FontColor', [0.7 0.7 0.7]);
-    ax_bar = uiaxes(p_ana, 'Position', [20 20 340 480], 'Color', bg, 'XColor', 'w', 'YColor', 'w');
+    % 4. Power
+    p_power = create_pnl(tab_power, 'Power System', '消費電流からバッテリーを選定');
+    u_pow = [
+        uislider(p_power, 'Limits', [0.1 20], 'Value', 2.0, 'Position', [30 430 280 3], 'FontColor', 'w'), ...
+        uislider(p_power, 'Limits', [0.5 24], 'Value', 3.0, 'Position', [30 350 280 3], 'FontColor', 'w'), ...
+        uislider(p_power, 'Limits', [5 24], 'Value', 11.1, 'Position', [30 270 280 3], 'FontColor', 'w'), ...
+        uislider(p_power, 'Limits', [1000 50000], 'Value', 15000, 'Position', [30 190 280 3], 'FontColor', 'w')
+    ];
+    uilabel(p_power, 'Text', 'Current Draw [A]', 'Position', [30 445 150 22], 'FontColor', 'w');
+    uilabel(p_power, 'Text', 'Required Time [h]', 'Position', [30 365 150 22], 'FontColor', 'w');
+    uilabel(p_power, 'Text', 'System Voltage [V]', 'Position', [30 285 150 22], 'FontColor', 'w');
+    uilabel(p_power, 'Text', 'Budget [JPY]', 'Position', [30 205 100 22], 'FontColor', 'w');
 
-    p_3d = uipanel(fig, 'Title', 'Master 3D Rendering', 'Position', [830 120 500 620], 'BackgroundColor', pnl_bg, 'ForegroundColor', txt);
-    ax_3d = uiaxes(p_3d, 'Position', [10 10 480 580], 'Color', [0 0 0], 'XColor', 'none', 'YColor', 'none');
-    view(ax_3d, 3); axis(ax_3d, 'equal'); grid(ax_3d, 'on');
+    % 5. Bolt
+    p_bolt = create_pnl(tab_bolt, 'Bolt & Joint', 'せん断荷重から最適なネジを選定');
+    u_bolt = [
+        uislider(p_bolt, 'Limits', [10 1000], 'Value', 200, 'Position', [30 430 280 3], 'FontColor', 'w'), ...
+        uislider(p_bolt, 'Limits', [1 16], 'Value', 4, 'Position', [30 350 280 3], 'FontColor', 'w'), ...
+        uislider(p_bolt, 'Limits', [0 10], 'Value', 0, 'Position', [30 270 280 3], 'FontColor', 'w', 'Visible', 'off'), ...
+        uislider(p_bolt, 'Limits', [10 5000], 'Value', 1000, 'Position', [30 190 280 3], 'FontColor', 'w')
+    ];
+    uilabel(p_bolt, 'Text', 'Shear Load [kg]', 'Position', [30 445 150 22], 'FontColor', 'w');
+    uilabel(p_bolt, 'Text', 'Number of Bolts', 'Position', [30 365 150 22], 'FontColor', 'w');
+    uilabel(p_bolt, 'Text', 'Total Budget [JPY]', 'Position', [30 205 150 22], 'FontColor', 'w');
 
-    btn_run = uibutton(fig, 'push', 'Text', '🚀 GENERATE ULTIMATE DESIGN CERTIFICATE (PDF)', 'FontSize', 18, 'FontWeight', 'bold', ...
-        'BackgroundColor', [0.1 0.5 0.2], 'FontColor', 'white', 'Position', [100 20 1150 85]);
+    % --- Panels ---
+    pnl_ana = uipanel(fig, 'Title', 'Analysis', 'Position', [385 120 340 570], 'BackgroundColor', panel_bg, 'ForegroundColor', txt_color);
+    lbl_status = uilabel(pnl_ana, 'Text', 'Best: ---', 'FontSize', 16, 'FontWeight', 'bold', 'Position', [20 510 300 40], 'FontColor', [0.2 0.8 1.0]);
+    lbl_phys = uilabel(pnl_ana, 'Text', '...', 'FontSize', 11, 'Position', [20 480 300 30], 'FontColor', [0.7 0.7 0.7]);
+    ax_bar = uiaxes(pnl_ana, 'Position', [20 20 300 450], 'Color', bg_color, 'XColor', 'w', 'YColor', 'w');
 
-    % --- Callback Logic ---
+    pnl_3d = uipanel(fig, 'Title', 'Live 3D', 'Position', [740 120 480 570], 'BackgroundColor', panel_bg, 'ForegroundColor', txt_color);
+    ax_3d = uiaxes(pnl_3d, 'Position', [10 10 460 530], 'Color', [0 0 0], 'XColor', 'none', 'YColor', 'none');
+
+    btn_run = uibutton(fig, 'push', 'Text', '🚀 GENERATE OMNIPOTENT CERTIFICATE', 'FontSize', 16, 'FontWeight', 'bold', ...
+        'BackgroundColor', [0.1 0.6 0.3], 'FontColor', 'white', 'Position', [100 25 1100 80]);
+
+    % --- Logic Bridge ---
+    function [inputs, mode] = get_current_state()
+        switch tg.SelectedTab.Title(5:end)
+            case 'Arm', inputs = [u_arm(1).Value, u_arm(2).Value, u_arm(3).Value, u_arm(4).Value]; mode = 'Arm';
+            case 'Lift', inputs = [u_lift(1).Value, u_lift(2).Value, u_lift(3).Value, u_lift(4).Value]; mode = 'Lift';
+            case 'Mobile', inputs = [u_mob(1).Value, u_mob(2).Value, u_mob(3).Value, u_mob(4).Value]; mode = 'Mobile';
+            case 'Power', inputs = [u_pow(1).Value, u_pow(2).Value, u_pow(3).Value, u_pow(4).Value]; mode = 'Power';
+            case 'Bolt', inputs = [u_bolt(1).Value, u_bolt(2).Value, u_bolt(3).Value, u_bolt(4).Value]; mode = 'Bolt';
+        end
+    end
+
     function update_ui(~, ~)
         try
-            % 1. Logic Module Call
-            [req_t, motor, catalog, b_idx, arm_mass] = AMD_Logic(sld_load.Value, sld_len.Value, sld_rad.Value, sld_budget.Value, 1.5, 'Arm', data_path);
-            lbl_status.Text = ['🏆 Best: ', char(motor.PartName)];
-            lbl_phys.Text = sprintf('Arm Mass: %.3f kg | Torque: %.2f Nm', arm_mass, req_t);
+            [inputs, mode] = get_current_state();
+            [req_val, comp, catalog, b_idx, extra_val, m_name, m_unit] = AMD_Logic(inputs, mode, project_root);
             
-            % 2. Visuals Module Call (Graph & 3D)
-            AMD_Visuals(ax_bar, ax_3d, catalog, b_idx, sld_len.Value, sld_rad.Value);
-        catch ME, fprintf('Error: %s\n', ME.message); end
+            lbl_status.Text = ['👑 Selected: ', char(comp.PartName)];
+            lbl_phys.Text = sprintf('Req. %s: %.2f %s | Budget: %d JPY', m_name, req_val, m_unit, round(inputs(4)));
+            
+            AMD_Visuals(ax_bar, ax_3d, catalog, b_idx, mode, inputs, m_name, m_unit);
+        catch, end
     end
 
     btn_run.ButtonPushedFcn = @(btn, event) run_full();
     function run_full()
-        [req_t, motor, catalog, b_idx, arm_mass] = AMD_Logic(sld_load.Value, sld_len.Value, sld_rad.Value, sld_budget.Value, 1.5, 'Arm', data_path);
-        % 3. Report Module Call (PDF)
-        AMD_Report(sld_load.Value, sld_len.Value, sld_rad.Value, sld_budget.Value, 1.5, 'Arm', motor, arm_mass, req_t, catalog, b_idx, output_dir);
-        % 4. Voice Module Call
-        AMD_Voice(motor.PartName, arm_mass, req_t);
+        [inputs, mode] = get_current_state();
+        [req_val, comp, catalog, b_idx, extra_val, m_name, m_unit] = AMD_Logic(inputs, mode, project_root);
+        AMD_Report(mode, comp, req_val, m_name, m_unit, catalog, b_idx, output_dir);
+        AMD_Voice(mode, comp.PartName);
     end
 
-    addlistener(sld_load, 'ValueChanged', @update_ui); addlistener(sld_len, 'ValueChanged', @update_ui);
-    addlistener(sld_rad, 'ValueChanged', @update_ui); addlistener(sld_budget, 'ValueChanged', @update_ui);
+    % Listeners for all tabs
+    for i=1:4
+        addlistener(u_arm(i), 'ValueChanged', @update_ui); addlistener(u_lift(i), 'ValueChanged', @update_ui);
+        addlistener(u_mob(i), 'ValueChanged', @update_ui); addlistener(u_pow(i), 'ValueChanged', @update_ui);
+        addlistener(u_bolt(i), 'ValueChanged', @update_ui);
+    end
+    addlistener(tg, 'SelectionChanged', @update_ui);
     update_ui();
 end

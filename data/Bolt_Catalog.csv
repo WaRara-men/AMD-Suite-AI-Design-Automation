@@ -1,0 +1,6 @@
+PartName,MaxShear_N,Price_JPY,Weight_kg,LeadTime,ProductURL
+M3-Steel-Bolt,1500,10,0.002,1-day,https://www.monotaro.com/s/q-M3%20bolt/
+M4-Steel-Bolt,2600,15,0.004,1-day,https://www.monotaro.com/s/q-M4%20bolt/
+M5-Steel-Bolt,4100,20,0.007,1-day,https://www.monotaro.com/s/q-M5%20bolt/
+M6-Steel-Bolt,5900,30,0.010,1-day,https://www.monotaro.com/s/q-M6%20bolt/
+M8-Steel-Bolt,10500,50,0.020,1-day,https://www.monotaro.com/s/q-M8%20bolt/
