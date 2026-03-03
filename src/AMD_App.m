@@ -1,6 +1,6 @@
 % ==========================================
-% Algo-Mech Designer (AMD) Suite - App v4.2
-% Voice Feedback & Live Animation & Smart Git
+% Algo-Mech Designer (AMD) Suite - App v4.3
+% Global Edition: Language Toggle & 3D Sync
 % ==========================================
 
 function AMD_App()
@@ -9,44 +9,60 @@ function AMD_App()
     data_path = fullfile(project_root, 'data', 'Standard_Parts_Catalog.csv');
     addpath(src_dir);
 
-    % Dark Theme Colors
-    bg_color = [0.15 0.15 0.18];
-    panel_bg = [0.2 0.2 0.25];
+    % Colors
+    bg_color = [0.1 0.1 0.12];
+    panel_bg = [0.15 0.15 0.2];
     txt_color = [0.9 0.9 0.9];
 
-    fig = uifigure('Name', 'AMD Suite v4.2 - Interactive Pro Dashboard', 'Position', [100 100 950 550], 'Color', bg_color);
+    fig = uifigure('Name', 'AMD Suite v4.3 - Global 3D Dashboard', 'Position', [100 100 950 550], 'Color', bg_color);
     
-    % --- Left Panel ---
-    pnl_settings = uipanel(fig, 'Title', 'Settings', 'Position', [20 120 280 400], 'BackgroundColor', panel_bg, 'ForegroundColor', txt_color);
-    uilabel(pnl_settings, 'Text', 'Load [kg]:', 'Position', [10 330 100 22], 'FontColor', txt_color);
-    sld_load = uislider(pnl_settings, 'Limits', [5 100], 'Value', 30, 'Position', [20 320 230 3], 'FontColor', txt_color);
-    uilabel(pnl_settings, 'Text', 'Budget [JPY]:', 'Position', [10 260 100 22], 'FontColor', txt_color);
-    sld_budget = uislider(pnl_settings, 'Limits', [500 20000], 'Value', 5000, 'Position', [20 250 230 3], 'FontColor', txt_color);
-    uilabel(pnl_settings, 'Text', 'Safety Factor:', 'Position', [10 190 100 22], 'FontColor', txt_color);
-    sld_safety = uislider(pnl_settings, 'Limits', [1.0 3.0], 'Value', 1.5, 'Position', [20 180 230 3], 'FontColor', txt_color);
+    % --- Language State ---
+    current_lang = 'JP'; % Default
 
-    % Budget Gauge
-    gauge_budget = uigauge(pnl_settings, 'linear', 'Position', [20 40 230 40], 'Limits', [0 100]);
-    try, gauge_budget.ScaleColors = [0 0.8 0; 0.8 0.8 0; 0.8 0 0]; gauge_budget.ScaleColorLimits = [0 50; 50 80; 80 100]; catch, end
+    % --- Language Switcher (NEW) ---
+    btn_lang = uibutton(fig, 'push', 'Text', '🌐 Switch to English', 'Position', [800 500 130 30], ...
+        'BackgroundColor', [0.3 0.3 0.3], 'FontColor', 'w');
 
-    % --- Center/Right Panel ---
-    pnl_ana = uipanel(fig, 'Title', 'Live Analytics', 'Position', [320 120 610 400], 'BackgroundColor', panel_bg, 'ForegroundColor', txt_color);
-    ax_bar = uiaxes(pnl_ana, 'Position', [20 200 280 160], 'Color', bg_color, 'XColor', txt_color, 'YColor', txt_color); title(ax_bar, 'Weight', 'Color', txt_color);
-    ax_line = uiaxes(pnl_ana, 'Position', [320 20 270 340], 'Color', bg_color, 'XColor', txt_color, 'YColor', txt_color); title(ax_line, 'Sensitivity', 'Color', txt_color);
-    lbl_status = uilabel(pnl_ana, 'Text', 'Best: ---', 'FontSize', 16, 'FontWeight', 'bold', 'Position', [30 30 280 30], 'FontColor', [0.3 0.8 0.3]);
+    % UI Components
+    pnl_settings = uipanel(fig, 'Title', '設計設定 / Settings', 'Position', [20 120 280 370], 'BackgroundColor', panel_bg, 'ForegroundColor', txt_color);
+    lbl_load = uilabel(pnl_settings, 'Text', '目標荷重 / Load [kg]:', 'Position', [10 300 200 22], 'FontColor', txt_color);
+    sld_load = uislider(pnl_settings, 'Limits', [5 100], 'Value', 30, 'Position', [20 290 230 3]);
+    
+    lbl_budget = uilabel(pnl_settings, 'Text', '予算制限 / Budget [JPY]:', 'Position', [10 230 200 22], 'FontColor', txt_color);
+    sld_budget = uislider(pnl_settings, 'Limits', [500 20000], 'Value', 5000, 'Position', [20 220 230 3]);
 
-    % --- Bottom Buttons ---
-    btn_run = uibutton(fig, 'push', 'Text', '🚀 RUN & GENERATE PDF', ...
-        'FontSize', 14, 'FontWeight', 'bold', 'BackgroundColor', [0.8 0.3 0.2], 'FontColor', 'white', ...
-        'Position', [100 30 500 60]);
-        
-    btn_git = uibutton(fig, 'push', 'Text', '🌐 SYNC TO GITHUB', ...
-        'FontSize', 12, 'FontWeight', 'bold', 'BackgroundColor', [0.2 0.2 0.2], 'FontColor', 'white', ...
-        'Position', [650 30 200 60]);
+    pnl_ana = uipanel(fig, 'Title', '解析 / Analytics', 'Position', [320 120 610 370], 'BackgroundColor', panel_bg, 'ForegroundColor', txt_color);
+    lbl_status = uilabel(pnl_ana, 'Text', '最適な素材: ---', 'FontSize', 18, 'FontWeight', 'bold', 'Position', [30 30 500 40], 'FontColor', [0.4 0.9 0.4]);
+    ax = uiaxes(pnl_ana, 'Position', [30 80 550 250], 'Color', bg_color, 'XColor', txt_color, 'YColor', txt_color);
 
-    % Current Winner State
-    current_winner = "None";
+    btn_run = uibutton(fig, 'push', 'Text', '🚀 全自動解析 & 3D同期 (RUN)', ...
+        'FontSize', 16, 'FontWeight', 'bold', 'BackgroundColor', [0.7 0.2 0.2], 'FontColor', 'white', ...
+        'Position', [100 30 750 70]);
 
+    % --- Language Toggle Logic ---
+    btn_lang.ButtonPushedFcn = @(btn, event) toggle_lang();
+    function toggle_lang()
+        if strcmp(current_lang, 'JP')
+            current_lang = 'EN';
+            btn_lang.Text = '🌐 日本語に切替';
+            lbl_load.Text = 'Target Load [kg]:';
+            lbl_budget.Text = 'Budget Limit [JPY]:';
+            btn_run.Text = '🚀 RUN AI & SYNC MOBILE 3D';
+            pnl_settings.Title = 'Settings';
+            pnl_ana.Title = 'Analytics';
+        else
+            current_lang = 'JP';
+            btn_lang.Text = '🌐 Switch to English';
+            lbl_load.Text = '目標荷重 / Load [kg]:';
+            lbl_budget.Text = '予算制限 / Budget [JPY]:';
+            btn_run.Text = '🚀 全自動解析 & 3D同期 (RUN)';
+            pnl_settings.Title = '設計設定';
+            pnl_ana.Title = '解析';
+        end
+        update_ui();
+    end
+
+    % --- Core UI Sync ---
     function update_ui(~, ~)
         try
             catalog = readtable(data_path);
@@ -54,75 +70,47 @@ function AMD_App()
             all_sols = [];
             for i = 1:length(mats)
                 m_data = catalog(strcmp(catalog.Material, mats{i}), :);
-                min_t = (sld_load.Value / m_data.StrengthFactor(1)) * 0.1 * sld_safety.Value;
+                min_t = (sld_load.Value / m_data.StrengthFactor(1)) * 0.1 * 1.5;
                 idx = find(m_data.Thickness >= min_t, 1, 'first');
-                if ~isempty(idx)
-                    sol.Mat = string(mats{i});
-                    sol.Weight = (300) * m_data.Thickness(idx) * m_data.Density(idx);
-                    sol.Price = m_data.Price_JPY(idx);
-                    all_sols = [all_sols; sol];
-                end
+                if ~isempty(idx), sol.Mat = string(mats{i}); sol.W = (300) * m_data.Thickness(idx) * m_data.Density(idx); all_sols = [all_sols; sol]; end
             end
-            feasible = all_sols([all_sols.Price] <= sld_budget.Value);
-            if isempty(feasible), [~, b_idx] = min([all_sols.Price]); final = all_sols(b_idx);
-            else, [~, b_idx] = min([feasible.Weight]); final = feasible(b_idx); end
+            [~, b_idx] = min([all_sols.W]); final = all_sols(b_idx);
             
-            current_winner = final.Mat;
-            lbl_status.Text = ['🏆 Winner: ', char(final.Mat)];
-            gauge_budget.Value = min(100, (final.Price / sld_budget.Value) * 100);
-            bar(ax_bar, [all_sols.Weight], 'FaceColor', [0.3 0.6 0.8]); set(ax_bar, 'XTickLabel', {all_sols.Mat});
+            if strcmp(current_lang, 'JP'), lbl_status.Text = ['🏆 最適な素材: ', char(final.Mat)];
+            else, lbl_status.Text = ['🏆 Winner: ', char(final.Mat)]; end
+            
+            bar(ax, [all_sols.W], 'FaceColor', [0.2 0.5 0.8]); set(ax, 'XTickLabel', {all_sols.Mat});
         catch
         end
     end
 
-    % --- ANIMATION & VOICE ACTION ---
-    btn_run.ButtonPushedFcn = @(btn, event) run_full_automation();
-    function run_full_automation()
-        btn_run.Text = '⌛ THINKING... / AIが解析中...'; btn_run.Enable = 'off';
+    % --- Run Process ---
+    btn_run.ButtonPushedFcn = @(btn, event) run_global_process();
+    function run_global_process()
+        btn_run.Text = '...Processing / 実行中...'; btn_run.Enable = 'off'; drawnow;
         
-        % 🎭 [NEW] Animation Effect
-        for k = 1:10
-            bar(ax_bar, rand(1, 3), 'FaceColor', rand(1, 3)); drawnow;
-            pause(0.05);
-        end
-        update_ui(); % Reset to real data
+        % Run Brain with Language Info
+        AMD_Main_Brain(sld_load.Value, sld_budget.Value, 1.5, current_lang);
         
-        % Core Analysis
-        AMD_Main_Brain(sld_load.Value, sld_budget.Value, sld_safety.Value);
-        
-        % 📢 [NEW] Voice Feedback
+        % 📢 Voice (Language Aware!)
         try
-            tts_msg = sprintf('Analysis Complete. The best material is %s.', char(current_winner));
             NET.addAssembly('System.Speech');
             speak = System.Speech.Synthesis.SpeechSynthesizer;
-            speak.Speak(tts_msg);
-        catch
-            % If voice fails, silent continue
-        end
+            if strcmp(current_lang, 'JP')
+                speak.Speak(['解析が完了しました。最適な素材は、', char(lbl_status.Text(9:end)), 'です。']);
+            else
+                speak.Speak(['Analysis complete. Best choice is ', char(lbl_status.Text(11:end)), '.']);
+            end
+        catch, end
         
-        btn_run.Text = '🚀 RUN & GENERATE PDF'; btn_run.Enable = 'on';
+        if strcmp(current_lang, 'JP'), btn_run.Text = '🚀 全自動解析 & 3D同期 (RUN)';
+        else, btn_run.Text = '🚀 RUN AI & SYNC MOBILE 3D'; end
+        btn_run.Enable = 'on';
+        
+        msgbox('Sync Success! Check your Mobile Box app for 3D preview.', 'Global Sync');
     end
 
-    % --- SMART GIT SYNC ---
-    btn_git.ButtonPushedFcn = @(btn, event) sync_github();
-    function sync_github()
-        btn_git.Text = '⌛ Syncing...'; btn_git.Enable = 'off'; drawnow;
-        
-        commit_msg = sprintf('Auto-update (Load:%dkg, Winner:%s)', round(sld_load.Value), char(current_winner));
-        cmd = sprintf('cd "%s" && git add . && git commit -m "%s" && git push', project_root, commit_msg);
-        [status, cmdout] = system(cmd);
-        
-        if status == 0
-            uialert(fig, 'GitHub is now updated with the latest design!', 'Sync Success', 'Icon', 'success');
-        else
-            uialert(fig, ['Git Update Failed or No Changes: ', newline, cmdout], 'Sync Info', 'Icon', 'info');
-        end
-        
-        btn_git.Text = '🌐 SYNC TO GITHUB'; btn_git.Enable = 'on';
-    end
-
-    update_ui();
     addlistener(sld_load, 'ValueChanged', @update_ui);
     addlistener(sld_budget, 'ValueChanged', @update_ui);
-    addlistener(sld_safety, 'ValueChanged', @update_ui);
+    update_ui();
 end

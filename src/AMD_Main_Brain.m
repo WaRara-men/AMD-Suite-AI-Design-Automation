@@ -1,17 +1,17 @@
 % ==========================================
-% Algo-Mech Designer (AMD) Suite - Core v4.1
-% Reliable Engine with Auto-Cleanup
+% Algo-Mech Designer (AMD) Suite - Core v4.3
+% Global Edition: Multi-Language & 3D Export
 % ==========================================
 
-function AMD_Main_Brain(target_load, budget_limit, safety_factor)
-    % --- 0. Precise Path Management ---
+function AMD_Main_Brain(target_load, budget_limit, safety_factor, lang)
+    % --- 0. Path Setup ---
     src_dir = fileparts(mfilename('fullpath'));
     project_root = fileparts(src_dir);
     data_dir = fullfile(project_root, 'data');
     output_dir = fullfile(project_root, 'out');
     if ~exist(output_dir, 'dir'), mkdir(output_dir); end
     
-    % --- 1. AI Logic ---
+    % --- 1. Load Data & Optimize ---
     catalog = readtable(fullfile(data_dir, 'Standard_Parts_Catalog.csv'));
     materials = unique(catalog.Material);
     all_solutions = struct('Material', {}, 'T', {}, 'PartNo', {}, 'Price', {}, 'Weight', {});
@@ -30,44 +30,62 @@ function AMD_Main_Brain(target_load, budget_limit, safety_factor)
         end
     end
 
-    % --- 2. Decision Making ---
+    % Decision Making
     feasible = all_solutions([all_solutions.Price] <= budget_limit);
     if isempty(feasible), [~, b_idx] = min([all_solutions.Price]); final_sol = all_solutions(b_idx);
     else, [~, b_idx] = min([feasible.Weight]); final_sol = feasible(b_idx); end
 
-    % --- 3. Output & Image Stamping ---
-    graph_path = fullfile(output_dir, 'sensitivity_plot.png');
-    fig = figure('Visible', 'off'); bar([all_solutions.Weight]); saveas(fig, graph_path); close(fig);
-    
-    T_bridge = cell2table({final_sol.T, char(final_sol.Material), final_sol.Price}, 'VariableNames', {'Thickness', 'Material', 'Price'});
-    writetable(T_bridge, fullfile(output_dir, 'Bridge_Nerve.csv'));
+    % --- 2. [NEW] Mobile 3D Data Export / スマホ用3D出力 ---
+    fprintf('📦 [3D] Exporting mobile-friendly 3D data... / スマホ用3Dデータを出力中...\n');
+    try
+        swApp = actxGetRunningServer('SldWorks.Application');
+        swModel = swApp.ActiveDoc;
+        if ~isempty(swModel)
+            % Export as STL (Box can preview STL in 3D on Mobile!)
+            stl_path = fullfile(output_dir, 'mobile_preview.STL');
+            swModel.SaveAs2(stl_path, 0, true, false);
+            fprintf('   -> ✅ 3D Mobile Data Generated!\n');
+        end
+    catch
+        fprintf('   -> ⚠️ SolidWorks not active for 3D export.\n');
+    end
 
-    % --- 4. Reporting (PDF Export) ---
+    % --- 3. [NEW] Multi-Language Reporting / 多言語レポート ---
     report_path = fullfile(output_dir, 'AMD_Decision_Report.docx');
     pdf_path = fullfile(output_dir, 'AMD_Decision_Report.pdf');
+    
     try
         word = actxserver('Word.Application'); word.Visible = 0;
         doc = word.Documents.Add; selection = word.Selection;
-        selection.Font.Size = 18; selection.Font.Bold = 1;
-        selection.TypeText('AMD Design Report (Auto-Generated)'); selection.TypeParagraph;
-        selection.Font.Size = 11; selection.Font.Bold = 0;
-        selection.TypeText(sprintf('Best: %s (Weight: %.3f kg)', final_sol.Material, final_sol.Weight));
-        selection.TypeParagraph; selection.InlineShapes.AddPicture(graph_path);
+        
+        if strcmp(lang, 'JP')
+            title_txt = 'AMD 自動設計報告書 (グローバル版)';
+            res_txt = sprintf('【最適解】 素材: %s, 推定重量: %.3f kg, 価格: %d JPY', final_sol.Material, final_sol.Weight, final_sol.Price);
+        else
+            title_txt = 'AMD AI Design Report (Global Edition)';
+            res_txt = sprintf('[Winner] Material: %s, Weight: %.3f kg, Price: %d JPY', final_sol.Material, final_sol.Weight, final_sol.Price);
+        end
+        
+        selection.Font.Size = 24; selection.Font.Bold = 1;
+        selection.TypeText(title_txt); selection.TypeParagraph;
+        selection.Font.Size = 12; selection.Font.Bold = 0;
+        selection.TypeText(res_txt); selection.TypeParagraph;
+        
         if exist(report_path, 'file'), delete(report_path); end
-        doc.SaveAs2(report_path); 
-        doc.SaveAs2(pdf_path, 17); % PDF Export
+        doc.SaveAs2(report_path); doc.SaveAs2(pdf_path, 17);
         doc.Close; word.Quit;
     catch
         if exist('word', 'var'), word.Quit; end
     end
 
-    % --- 5. 🧹 Auto-Cleanup (Spring Cleaning) ---
-    % Remove temporary files from root and src / ゴミファイルを一掃
-    temp_patterns = {'*.asv', '*.m~', 'temp_*.*'};
-    for p = 1:length(temp_patterns)
-        delete(fullfile(project_root, temp_patterns{p}));
-        delete(fullfile(src_dir, temp_patterns{p}));
+    % --- 4. Box Auto-Sync ---
+    box_path = fullfile(getenv('USERPROFILE'), 'Box', 'AMD_Global_Project');
+    if exist(fullfile(getenv('USERPROFILE'), 'Box'), 'dir')
+        if ~exist(box_path, 'dir'), mkdir(box_path); end
+        copyfile(pdf_path, fullfile(box_path, 'Report.pdf'));
+        if exist(fullfile(output_dir, 'mobile_preview.STL'), 'file')
+            copyfile(fullfile(output_dir, 'mobile_preview.STL'), fullfile(box_path, 'View_in_3D.stl'));
+        end
+        fprintf('✅ [SYNC] Mobile 3D and Report synced to Box!\n');
     end
-    
-    msgbox(['Report Generated in /out!', newline, 'Winner: ', char(final_sol.Material)], 'AMD Suite');
 end
