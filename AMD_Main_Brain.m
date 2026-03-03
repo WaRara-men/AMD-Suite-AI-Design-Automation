@@ -1,88 +1,103 @@
 % ==========================================
-% Algo-Mech Designer (AMD) Suite - Core v2.2
-% Bilingual Edition (English & Japanese)
+% Algo-Mech Designer (AMD) Suite - Core v2.4
+% Catalog Integration & Safety Optimization
 % ==========================================
 
 % --- 1. Input Design Parameters / 設計パラメータの入力 ---
-% Define your design goals here / ここに設計目標を入力します
-target_load = 25;      % [kg] Target load to withstand / 耐えたい重さ
-case_width  = 150;     % [mm] Required width for components / 必要な幅
+target_load = 25;      % [kg] Target load / 耐荷重
+case_width  = 150;     % [mm] Case width / 幅
 
-% --- 2. Brain (AI / Genetic Algorithm) / 脳 (AI / 遺伝的アルゴリズム) ---
-% Goal: Minimize weight while clearing strength constraints
-% 目標: 強度条件をクリアしつつ、重量を最小化する
-fprintf('🧠 [AI] Starting Genetic Algorithm optimization... / 遺伝的アルゴリズムを開始します...\n');
+% --- 2. Brain (AI Optimization) / 脳 (AI 最適化) ---
+fprintf('🧠 [AI] Starting Optimization... / 最適化計算を開始します...\n');
 
-% Objective Function: Minimize weight (Width * Thickness * Density)
-% 目的関数: 重量を最小化したい (幅 × 厚み × 比重)
 obj_func = @(t) (case_width * 2) * t * 0.0027; 
+lb = 1.0; ub = 10.0;
+min_t_required = target_load * 0.08;
 
-lb = 1.0;  % Minimum thickness [mm] / 厚みの下限
-ub = 10.0; % Maximum thickness [mm] / 厚みの上限
+% Optimization with Fallback / 最適化エンジン
+try
+    if license('test', 'gads_toolbox') && ~isempty(which('ga'))
+        options = optimoptions('ga', 'Display', 'none');
+        [optimal_thickness, ~] = ga(obj_func, 1, -1, -min_t_required, [], [], lb, ub, [], options);
+    else
+        search_lb = max(lb, min_t_required);
+        [optimal_thickness, ~] = fminbnd(obj_func, search_lb, ub);
+    end
+catch
+    optimal_thickness = max(lb, min_t_required);
+end
 
-% Constraint: Thickness must be >= (load * 0.08)
-% 制約条件: 厚みは (荷重 * 0.08) 以上でなければならない
-A = -1; 
-b = -(target_load * 0.08); 
+% --- 3. Catalog Selection (NEW!) / カタログ選定機能 ---
+% Load standard parts database / 標準部品データベースを読み込み
+catalog = readtable('Standard_Parts_Catalog.csv');
 
-% Execute Genetic Algorithm (GA) / 遺伝的アルゴリズムを実行
-options = optimoptions('ga', 'Display', 'none');
-[optimal_thickness, min_weight] = ga(obj_func, 1, A, b, [], [], lb, ub, [], options);
+% Find the nearest "safe" thickness from catalog
+% カタログから、計算値以上の厚みで最も近いものを探す
+valid_idx = find(catalog.Thickness >= optimal_thickness, 1, 'first');
+if isempty(valid_idx)
+    valid_idx = height(catalog); % Use max if out of range
+end
 
-fprintf('🎯 [AI] Optimal solution found! / 最適解を発見しました！\n');
-fprintf('   - Thickness / 厚み: %.2f mm\n', optimal_thickness);
-fprintf('   - Est. Weight / 推定重量: %.3f kg\n', min_weight);
+selected_t = catalog.Thickness(valid_idx);
+selected_part_no = catalog.PartNumber{valid_idx};
+selected_lead_time = catalog.LeadTime{valid_idx};
 
-% --- 3. Generate Analysis Plot / 解析グラフの作成 ---
-% Visualize how AI found the design point / AIの思考を可視化します
+fprintf('🎯 [AI] Theoretical: %.2f mm -> Catalog: %.1f mm (%s)\n', ...
+    optimal_thickness, selected_t, selected_part_no);
+
+% --- 4. Generate Analysis Plot / 解析グラフの作成 ---
 loads = 5:5:50;
 thickness_trend = loads * 0.08;
 fig = figure('Visible', 'off');
 plot(loads, thickness_trend, 'b--', 'LineWidth', 1.5); hold on;
-plot(target_load, optimal_thickness, 'rp', 'MarkerSize', 15, 'MarkerFaceColor', 'r');
-grid on; xlabel('Load [kg]'); ylabel('Required Thickness [mm]');
-title('AI Optimization: Load vs. Thickness / AI最適化結果');
-legend('Required Strength / 必要強度', 'AI Optimized Point / AI最適化点');
+plot(target_load, optimal_thickness, 'rp', 'MarkerSize', 10);
+plot(target_load, selected_t, 'gs', 'MarkerSize', 12, 'LineWidth', 2);
+grid on; xlabel('Load [kg]'); ylabel('Thickness [mm]');
+title('AI Optimization & Catalog Selection');
+legend('Required Strength', 'Theoretical (AI)', 'Selected (Catalog)');
 graph_path = fullfile(pwd, 'ai_analysis_plot.png');
 saveas(fig, graph_path); close(fig);
 
-% --- 4. Send Data to Nerve (Bridge_Nerve.csv) / 神経 (Bridge_Nerve.csv) へ送信 ---
-% This CSV links MATLAB and SolidWorks / このCSVがMATLABとSolidWorksを繋ぎます
-T_bridge = table(case_width, optimal_thickness, 'VariableNames', {'Width', 'Thickness'});
+% --- 5. Send Data to Nerve (Bridge_Nerve.csv) / 神経へ送信 ---
+% We send the SELECTED thickness, because that's what we actually buy!
+T_bridge = table(case_width, selected_t, 'VariableNames', {'Width', 'Thickness'});
 writetable(T_bridge, 'Bridge_Nerve.csv');
-fprintf('✅ [3D] Bridge_Nerve.csv updated. / 神経ファイルを更新しました。\n');
+fprintf('✅ [3D] Bridge_Nerve.csv updated with Catalog Value.\n');
 
-% --- 5. Automatic Report Generation (Word) / レポートの自動生成 ---
+% --- 6. Automatic Report Generation (Word) / レポートの自動生成 ---
 try
     word = actxserver('Word.Application'); word.Visible = 0;
     doc = word.Documents.Add; selection = word.Selection;
     
-    % Report Title / タイトル
     selection.Style = 'Heading 1'; 
-    selection.TypeText('AMD AI Design Report / 次世代AI自動設計報告書'); 
+    selection.TypeText('AMD Design Report with Catalog Selection'); 
     selection.TypeParagraph;
     
-    % Design Details / 設計詳細
     selection.Style = 'Normal'; 
-    selection.TypeText(['Date / 日時: ', datestr(now)]); selection.TypeParagraph;
-    selection.TypeText(sprintf('Target Load / 目標耐荷重: %d kg', target_load)); selection.TypeParagraph;
-    selection.TypeText(sprintf('AI Optimized Thickness / AI最適厚み: %.2f mm', optimal_thickness)); selection.TypeParagraph;
-    selection.TypeText(sprintf('Minimized Weight / 最小化重量: %.3f kg', min_weight)); selection.TypeParagraph;
-    
-    % Optimization Plot / 最適化グラフ
-    selection.Style = 'Heading 2'; 
-    selection.TypeText('Optimization Graph / 最適化グラフ'); 
+    selection.TypeText(['Date: ', datestr(now)]); selection.TypeParagraph;
+    selection.TypeText(sprintf('Target Load: %d kg', target_load)); selection.TypeParagraph;
+    selection.TypeText(sprintf('AI Theoretical Result: %.2f mm', optimal_thickness)); selection.TypeParagraph;
     selection.TypeParagraph;
-    selection.InlineShapes.AddPicture(graph_path); selection.TypeParagraph;
-    selection.TypeText('Figure 1: Result of AI optimization / AIによる最適化結果'); selection.TypeParagraph;
     
-    % Save and Close / 保存と終了
+    % Catalog Info / カタログ情報
+    selection.Font.Bold = 1;
+    selection.TypeText('--- SELECTED STANDARD PART / 選定された標準部品 ---');
+    selection.TypeParagraph;
+    selection.Font.Bold = 0;
+    selection.TypeText(sprintf('Part Number: %s', selected_part_no)); selection.TypeParagraph;
+    selection.TypeText(sprintf('Catalog Thickness: %.1f mm', selected_t)); selection.TypeParagraph;
+    selection.TypeText(sprintf('Estimated Delivery: %s', selected_lead_time)); selection.TypeParagraph;
+    selection.TypeParagraph;
+    
+    selection.Style = 'Heading 2'; 
+    selection.TypeText('Optimization Graph'); selection.TypeParagraph;
+    selection.InlineShapes.AddPicture(graph_path); selection.TypeParagraph;
+    
     file_name = fullfile(pwd, 'AMD_Design_Report.docx');
     if exist(file_name, 'file'), delete(file_name); end
     doc.SaveAs2(file_name); doc.Close; word.Quit;
-    fprintf('✅ [REPORT] AI Report generated! / AIレポートを生成しました！\n');
-    fprintf('   -> %s\n', file_name);
+    fprintf('✅ [REPORT] AI Report (Bilingual) generated with Catalog info!\n');
 catch ME
-    fprintf('❌ [REPORT] Error occurred / エラーが発生しました: %s\n', ME.message);
+    fprintf('❌ [REPORT] Error: %s\n', ME.message);
     if exist('word', 'var'), word.Quit; end
 end

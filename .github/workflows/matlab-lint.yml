@@ -1,0 +1,22 @@
+name: MATLAB Code Analyzer
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v3
+
+      - name: Set up MATLAB
+        uses: matlab-actions/setup-matlab@v2
+
+      - name: Check for code issues
+        uses: matlab-actions/run-command@v2
+        with:
+          command: results = mlint('.'); if ~isempty(results), error('MATLAB Code Analyzer found issues.'); end
