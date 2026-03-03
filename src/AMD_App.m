@@ -1,6 +1,6 @@
 % ==========================================
-% Algo-Mech Designer (AMD) Suite - App v7.5
-% TRUE FINAL: Error-Free UI & Smart Cleanup
+% Algo-Mech Designer (AMD) Suite - App v7.5.1
+% TRUE FINAL: Fixed Callback Naming Error
 % ==========================================
 
 function AMD_App()
@@ -10,7 +10,7 @@ function AMD_App()
     output_dir = fullfile(project_root, 'out');
     addpath(src_dir);
 
-    % --- 1. Silent Startup Cleanup / 警告なしのお掃除 ---
+    % --- 1. Silent Startup Cleanup ---
     stray = {'*.asv', 'AMD_*.pdf', 'Final_*.pdf', '*.docx', '*.png'};
     for s = 1:length(stray)
         files = dir(fullfile(project_root, stray{s}));
@@ -19,9 +19,9 @@ function AMD_App()
         for f = 1:length(files), delete(fullfile(src_dir, files(f).name)); end
     end
 
-    % --- 2. UI Reconstruction (FULL) ---
-    bg_color = [0.05 0.05 0.08]; panel_bg = [0.1 0.1 0.15]; txt_color = [0.95 0.95 0.95]; hint_color = [0.7 0.7 0.7];
-    fig = uifigure('Name', 'AMD Suite v7.5 - True Final Edition', 'Position', [100 100 1150 650], 'Color', bg_color);
+    % --- 2. UI Reconstruction ---
+    bg_color = [0.05 0.05 0.08]; panel_bg = [0.1 0.1 0.15]; txt_color = [0.95 0.95 0.95];
+    fig = uifigure('Name', 'AMD Suite v7.5.1 - Final Absolute Edition', 'Position', [100 100 1150 650], 'Color', bg_color);
     current_lang = 'JP';
 
     % Settings
@@ -67,9 +67,10 @@ function AMD_App()
         catch, end
     end
 
+    % 🎯 FIXED: Corrected function name to match callback
     btn_run.ButtonPushedFcn = @(btn, event) run_full();
-    function run_all()
-        btn_run.Text = '⌛ Processing AI...'; btn_run.Enable = 'off'; drawnow;
+    function run_full()
+        btn_run.Text = '⌛ Generating Official Certificate...'; btn_run.Enable = 'off'; drawnow;
         AMD_Main_Brain(sld_load.Value, sld_budget.Value, sld_safety.Value, current_lang);
         btn_run.Text = '🚀 GENERATE OFFICIAL CERTIFICATE'; btn_run.Enable = 'on';
     end
