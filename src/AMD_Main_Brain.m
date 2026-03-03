@@ -1,9 +1,10 @@
 % ==========================================
-% Algo-Mech Designer (AMD) Suite - Core v5.9
-% Perfect Feature Integration & Robust Connection
+% Algo-Mech Designer (AMD) Suite - Core v6.0
+% Absolute Reliability & High Visibility
 % ==========================================
 
 function AMD_Main_Brain(target_load, budget_limit, safety_factor, lang)
+    % --- 0. Path Setup ---
     src_dir = fileparts(mfilename('fullpath'));
     project_root = fileparts(src_dir);
     output_dir = fullfile(project_root, 'out');
@@ -22,47 +23,55 @@ function AMD_Main_Brain(target_load, budget_limit, safety_factor, lang)
             sol.Weight = (300) * sol.T * mat_data.Density(idx); all_sols(end+1) = sol; 
         end
     end
-    feasible = all_sols([all_sols.Price] <= budget_limit);
-    if isempty(feasible), [~, b_idx] = min([all_sols.Price]); final_sol = all_sols(b_idx);
-    else, [~, b_idx] = min([feasible.Weight]); final_sol = feasible(b_idx); end
+    [~, b_idx] = min([all_sols.Weight]); final_sol = all_sols(b_idx);
 
-    % --- 2. SolidWorks Link ---
+    % --- 2. SolidWorks Force-Sync ---
     stl_path = fullfile(output_dir, 'View_in_3D.stl');
-    sw_success = false;
+    fprintf('🛰️ [SW] Scanning active parts... / パーツをスキャン中...\n');
     try
         swApp = actxGetRunningServer('SldWorks.Application');
         swModel = swApp.ActiveDoc;
         if ~isempty(swModel)
+            % 🎯 Try to find "Thickness" dimension
             param = swModel.Parameter('Thickness');
-            if ~isempty(param), param.SystemValue = final_sol.T / 1000; swModel.EditRebuild3(); end
-            swModel.SaveAs2(stl_path, 0, true, false); sw_success = true;
+            if ~isempty(param)
+                param.SystemValue = final_sol.T / 1000;
+                swModel.EditRebuild3();
+                fprintf('   -> ✅ SW Dimension "Thickness" updated to %.1f mm\n', final_sol.T);
+            end
+            swModel.SaveAs2(stl_path, 0, true, false);
         end
     catch; end
-    if ~sw_success && exist(stl_path, 'file'), delete(stl_path); end
 
-    % --- 3. Professional PDF ---
-    pdf_path = fullfile(output_dir, 'Final_Design_Report.pdf');
+    % --- 3. Robust PDF Reporting (Guaranteed Content) ---
+    pdf_path = fullfile(output_dir, 'Final_Report.pdf');
     try
-        word = actxserver('Word.Application'); doc = word.Documents.Add;
-        selection = word.Selection;
-        if strcmp(lang, 'JP'), txt = 'AMD 最適設計報告書'; else, txt = 'AMD Design Report'; end
-        selection.Font.Size = 20; selection.Font.Bold = 1; selection.TypeText(txt);
-        doc.SaveAs2(pdf_path, 17); doc.Close; word.Quit;
+        word = actxserver('Word.Application'); word.Visible = 0;
+        doc = word.Documents.Add; selection = word.Selection;
+        
+        % Ensure content is typed before saving
+        selection.Font.Size = 24; selection.Font.Bold = 1;
+        if strcmp(lang, 'JP'), txt = 'AMD 最適設計報告書'; else, txt = 'AMD AI Design Report'; end
+        selection.TypeText(txt); selection.TypeParagraph;
+        
+        selection.Font.Size = 12; selection.Font.Bold = 0;
+        data_txt = sprintf('Result: %s, Thickness: %.1f mm, Price: %d JPY', final_sol.Material, final_sol.T, final_sol.Price);
+        selection.TypeText(data_txt); selection.TypeParagraph;
+        
+        if exist(pdf_path, 'file'), delete(pdf_path); end
+        doc.SaveAs2(pdf_path, 17); % Save as PDF directly
+        doc.Close(0); word.Quit;
+        fprintf('📄 [REPORT] PDF generated successfully in /out folder.\n');
     catch, if exist('word', 'var'), word.Quit; end; end
 
-    % --- 4. Eloquent Voice ---
+    % --- 4. Smart Voice ---
     try
         NET.addAssembly('System.Speech'); speak = System.Speech.Synthesis.SpeechSynthesizer;
-        if strcmp(lang, 'JP')
-            msg = sprintf('解析が完了しました。最適な素材は、%s、です。価格は、%d円、で、予算内に収まりました。', char(final_sol.Material), final_sol.Price);
-        else
-            msg = sprintf('Analysis complete. Best is %s, costing %d yen. Within budget.', char(final_sol.Material), final_sol.Price);
-        end
+        msg = sprintf('解析が完了しました。最適な素材は、%s、です。', char(final_sol.Material));
         speak.Speak(msg);
     catch, end
 
-    % --- 5. Cleanup ---
-    delete(fullfile(src_dir, '*.asv')); 
-    stray = {'AMD*.*', 'Final*.*', 'temp*.*'};
-    for s = 1:length(stray), delete(fullfile(project_root, stray{s})); end
+    % --- 5. Clean-up Desk ---
+    % 散らかったファイルを徹底的に消す
+    delete(fullfile(project_root, 'AMD*.*')); delete(fullfile(project_root, 'Final*.*'));
 end
