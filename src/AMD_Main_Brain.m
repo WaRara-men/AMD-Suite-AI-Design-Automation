@@ -1,6 +1,6 @@
 % ==========================================
-% Algo-Mech Designer (AMD) Suite - Core v7.2
-% Instant PDF Viewer & Sound Feedback
+% Algo-Mech Designer (AMD) Suite - Core v7.3
+% Unique Timestamped PDF & Forced Front-Open
 % ==========================================
 
 function AMD_Main_Brain(target_load, budget_limit, safety_factor, lang)
@@ -10,7 +10,7 @@ function AMD_Main_Brain(target_load, budget_limit, safety_factor, lang)
     output_dir = fullfile(project_root, 'out');
     if ~exist(output_dir, 'dir'), mkdir(output_dir); end
     
-    % --- 1. AI Logic (Simplified logic for certification focus) ---
+    % --- 1. AI Logic & Specification Logic ---
     catalog = readtable(fullfile(data_dir, 'Standard_Parts_Catalog.csv'));
     materials = unique(catalog.Material); all_sols = struct('Material', {}, 'T', {}, 'PartNo', {}, 'Price', {}, 'Weight', {}, 'Density', {}, 'StrengthFactor', {}, 'LeadTime', {});
     for i = 1:length(materials)
@@ -28,38 +28,39 @@ function AMD_Main_Brain(target_load, budget_limit, safety_factor, lang)
     end
     [~, b_idx] = min([all_sols.Weight]); final_sol = all_sols(b_idx);
 
-    % --- 2. Advanced Certification Logic (PDF) ---
-    pdf_path = fullfile(output_dir, 'AMD_Design_Certificate.pdf');
+    % --- 2. 🌟 Unique PDF Generation (Time-stamped) ---
+    ts = datestr(now, 'yyyymmdd_HHMMSS');
+    pdf_name = sprintf('AMD_Certificate_%s.pdf', ts);
+    pdf_path = fullfile(output_dir, pdf_name);
+    
     try
         word = actxserver('Word.Application'); word.Visible = 0;
         doc = word.Documents.Add; selection = word.Selection;
         
-        % [Content Generation - Same as v7.1]
         selection.ParagraphFormat.Alignment = 1;
         selection.Font.Size = 26; selection.Font.Bold = 1;
-        selection.TypeText('DESIGN VERIFICATION CERTIFICATE'); selection.TypeParagraph;
+        selection.TypeText('OFFICIAL DESIGN CERTIFICATE'); selection.TypeParagraph;
         selection.Font.Size = 12; selection.Font.Bold = 0;
-        selection.TypeText(sprintf('Result: %s | ID: %s', final_sol.Material, upper(dec2hex(posixtime(datetime('now'))))));
+        selection.TypeText(sprintf('Result: %s | Time: %s', final_sol.Material, datestr(now)));
         
-        if exist(pdf_path, 'file'), delete(pdf_path); end
+        % Save as PDF
         doc.SaveAs2(pdf_path, 17); doc.Close(0); word.Quit;
-        fprintf('   -> ✅ Certificate ready!\n');
+        fprintf('   -> ✅ Certificate generated: %s\n', pdf_name);
         
-        % 🌟 [NEW] AUTO-OPEN PDF IMMEDIATELY / 完成したPDFを今すぐ開く
-        winopen(pdf_path);
+        % 🌟 [NEW] FORCED FRONT-OPEN USING WEB COMMAND
+        % ブラウザを使用して最前面でPDFを開く
+        web(pdf_path, '-browser');
         
-        % 🎵 [NEW] Success Sound / 成功音
-        beep; pause(0.1); beep;
-        
+        beep;
     catch ME
-        fprintf('   -> ❌ Certificate Failed: %s\n', ME.message);
+        fprintf('   -> ❌ PDF Generation Failed: %s\n', ME.message);
         if exist('word', 'var'), word.Quit; end
     end
 
     % --- 3. Final Voice ---
     try
         NET.addAssembly('System.Speech'); speak = System.Speech.Synthesis.SpeechSynthesizer;
-        msg = sprintf('設計完了。証明書を表示します。');
+        msg = sprintf('設計完了。最新の証明書を開きます。');
         speak.Speak(msg);
     catch, end
 end
